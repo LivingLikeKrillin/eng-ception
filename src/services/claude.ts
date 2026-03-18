@@ -21,7 +21,8 @@ export async function callClaude<T extends ChatStep>(
   step: T,
   data: Record<string, unknown>,
 ): Promise<StepResponseMap[T]> {
-  const systemPrompt = SYSTEM_PROMPTS[step === 'easy-korean' ? 'easyKorean' : step]
+  const promptKey = step === 'easy-korean' ? 'easyKorean' : step
+  const systemPrompt = SYSTEM_PROMPTS[promptKey as keyof typeof SYSTEM_PROMPTS]
   const userMessage = buildUserMessage(step, data)
 
   let lastError: Error | null = null
