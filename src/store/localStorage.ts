@@ -7,6 +7,9 @@ const KEYS = {
   patterns: 'eng-ception:patterns',
 } as const
 
+const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
+const CURRENT_SCHEMA_VERSION = 3
+
 const MAX_RECORDS = 100
 
 function getItem<T>(key: string): T[] {
@@ -19,6 +22,15 @@ function setItem<T>(key: string, data: T[]): void {
 }
 
 export const localStorageAdapter: DataStore = {
+  async init() {
+    const stored = localStorage.getItem(SCHEMA_VERSION_KEY)
+    if (stored !== String(CURRENT_SCHEMA_VERSION)) {
+      localStorage.removeItem(KEYS.records)
+      localStorage.removeItem(KEYS.patterns)
+      localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
+    }
+  },
+
   async getScenarios() {
     return getItem<Scenario>(KEYS.scenarios)
   },
