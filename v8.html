@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=393,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Eng-ception v8</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --ko:'Pretendard Variable','Pretendard',-apple-system,system-ui,sans-serif;
+  --en:'Geist','Inter','SF Pro Display',-apple-system,sans-serif;
+  --a:#8B8BF5;--ok:#5EC492;--w:#D4975A;
+  --bg:#111113;--c:#18181C;--c2:#1E1E23;--line:#27272C;
+  --t1:#E8E8EC;--t2:#A0A0A8;--t3:#68686F;--t4:#45454B;
+}
+body{background:var(--bg);color:var(--t1);font-family:var(--ko);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{display:none}
+
+.phone{max-width:393px;min-height:100vh;margin:0 auto;position:relative}
+.s{display:none;min-height:100vh;flex-direction:column}.s.on{display:flex}
+
+/* Animations */
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(.93)}70%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes sfr{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes wave{0%{box-shadow:0 0 0 0 rgba(139,139,245,.2)}100%{box-shadow:0 0 0 80px rgba(139,139,245,0)}}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes growY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes wipe{from{width:0}to{width:100%}}
+@keyframes numIn{from{opacity:0;transform:scale(.4) rotate(-10deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.fu{animation:fu .5s ease both}.fu1{animation:fu .5s ease .1s both}.fu2{animation:fu .5s ease .2s both}.fu3{animation:fu .5s ease .3s both}.fu4{animation:fu .5s ease .4s both}
+.fi{animation:fi .4s ease both}.sfr{animation:sfr .45s ease both}
+
+/* Buttons */
+.btn{width:100%;height:52px;border-radius:14px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ko);transition:all .3s ease}
+.btn-primary{background:var(--a);color:#fff;box-shadow:0 4px 20px rgba(139,139,245,.2)}
+.btn-primary:active{transform:scale(.97)}
+.btn-ghost{background:transparent;color:var(--t4)}
+.btn-disabled{background:var(--c2);color:var(--t4);cursor:default}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+<!-- ═══════════════════════════ HOME ═══════════════════════════ -->
+<div class="s on" id="s-home">
+  <!-- Header -->
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--a),#6B6BF5);display:flex;align-items:center;justify-content:center">
+        <span style="font-size:13px;font-weight:700;font-family:var(--en);color:#fff">E</span>
+      </div>
+      <span style="font-size:15px;font-weight:600;font-family:var(--en);color:var(--t2);letter-spacing:-.5px">eng-ception</span>
+    </div>
+    <!-- Streak -->
+    <div class="fi" style="display:flex;align-items:center;gap:6px;background:var(--c);border-radius:20px;padding:6px 12px 6px 10px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" fill="none" stroke="var(--a)" stroke-width="2"/><path d="M12 6v6l4 2" stroke="var(--a)" stroke-width="2" stroke-linecap="round"/></svg>
+      <span style="font-size:12px;font-weight:600;font-family:var(--en);color:var(--a)">4</span>
+      <span style="font-size:12px;color:var(--t3)">일째</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 24px">
+
+    <!-- Hero -->
+    <div class="fu" style="margin-bottom:40px">
+      <p style="font-size:15px;color:var(--t3);margin-bottom:12px;line-height:1.5">
+        오늘도 말하고 싶었는데<br>입 안에서만 맴돌았지?
+      </p>
+      <h1 style="font-size:30px;font-weight:700;line-height:1.45;letter-spacing:-1.2px">
+        그거, 여기다<br><span style="color:var(--a)">풀어봐.</span>
+      </h1>
+    </div>
+
+    <!-- Input -->
+    <div class="fu1" id="home-input-wrap" style="background:var(--c);border-radius:20px;padding:20px;border:1.5px solid transparent;transition:all .3s ease">
+      <textarea id="home-input" placeholder="한국어로 그냥 적어봐. 맞춤법 신경 쓸 필요 없어." rows="3" style="width:100%;background:transparent;border:none;color:var(--t1);font-size:16px;line-height:1.65;resize:none;outline:none;font-family:var(--ko);letter-spacing:-.2px"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <!-- Mic -->
+          <div style="width:42px;height:42px;border-radius:14px;background:var(--c2);display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <svg width="18" height="18" fill="none" stroke="var(--t3)" stroke-width="1.7" viewBox="0 0 24 24"><path d="M19 11a7 7 0 01-14 0M12 19v3m-4-3h8M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span style="font-size:12px;color:var(--t4)">또는 말해봐</span>
+        </div>
+        <button id="btn-go" onclick="startFlow()" class="btn-disabled" style="height:42px;padding:0 22px;border-radius:14px;border:none;font-size:14px;font-weight:600;font-family:var(--ko);transition:all .3s">풀어보기</button>
+      </div>
+    </div>
+
+    <!-- Quick starters -->
+    <div class="fu2" style="margin-top:32px">
+      <p style="font-size:12px;font-weight:600;color:var(--t4);margin-bottom:14px;letter-spacing:.5px;text-transform:uppercase;font-family:var(--en)">Try these</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="ex" onclick="pickEx(this)" style="padding:12px 16px;background:var(--c);border-radius:14px;cursor:pointer;transition:all .2s;border:1px solid transparent">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <p style="font-size:14px;line-height:1.55;color:var(--t2);flex:1">좋은 아이디어인 건 맞는데, 리소스가 부족하지 않을까요?</p>
+            <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:3px 8px;border-radius:6px;margin-left:10px;white-space:nowrap">회의</span>
+          </div>
+        </div>
+        <div class="ex" onclick="pickEx(this)" style="padding:12px 16px;background:var(--c);border-radius:14px;cursor:pointer;transition:all .2s;border:1px solid transparent">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <p style="font-size:14px;line-height:1.55;color:var(--t2);flex:1">원래 그쪽으로 가려고 했는데, 길이 막혀서 돌아왔어</p>
+            <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:3px 8px;border-radius:6px;margin-left:10px;white-space:nowrap">일상</span>
+          </div>
+        </div>
+        <div class="ex" onclick="pickEx(this)" style="padding:12px 16px;background:var(--c);border-radius:14px;cursor:pointer;transition:all .2s;border:1px solid transparent">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <p style="font-size:14px;line-height:1.55;color:var(--t2);flex:1">네가 그렇게 말하니까 진짜 허탈하더라</p>
+            <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:3px 8px;border-radius:6px;margin-left:10px;white-space:nowrap">감정</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 복습 유도 카드 (복습이 남아있을 때) -->
+    <div id="review-nudge" class="fu3" style="margin-top:32px" onclick="goTo('review')">
+      <div style="padding:14px 16px;background:rgba(212,151,90,.04);border:1px solid rgba(212,151,90,.1);border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+        <div style="width:36px;height:36px;border-radius:12px;background:rgba(212,151,90,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" fill="none" stroke="var(--w)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="flex:1">
+          <p style="font-size:14px;font-weight:600;color:var(--t2);margin-bottom:2px">복습 <span style="font-family:var(--en);color:var(--w)">3</span>개 남았어</p>
+          <p style="font-size:12px;color:var(--t4)">먼저 복습하면 오늘의 문장이 열려</p>
+        </div>
+        <svg width="16" height="16" fill="none" stroke="var(--t4)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+
+    <!-- 오늘의 문장 section (잠금 상태) -->
+    <div id="today-section" class="fu4" style="margin-top:12px;margin-bottom:20px">
+      <p style="font-size:12px;font-weight:600;color:var(--t4);margin-bottom:14px;letter-spacing:.5px;text-transform:uppercase;font-family:var(--en)">오늘의 문장</p>
+      <div id="today-card" style="padding:14px;background:var(--c);border-radius:14px;border-left:3px solid var(--line);position:relative;overflow:hidden;transition:all .3s">
+        <!-- 잠금 오버레이 -->
+        <div id="today-lock" style="position:absolute;inset:0;background:rgba(17,17,19,.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:2;border-radius:14px;transition:opacity .3s">
+          <div style="text-align:center">
+            <svg width="20" height="20" fill="none" stroke="var(--t4)" stroke-width="1.8" viewBox="0 0 24 24" style="margin-bottom:4px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <p style="font-size:11px;color:var(--t4)">복습 완료 후 해금</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:700;font-family:var(--en);color:var(--a)">DAY 4</span>
+          <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:3px 8px;border-radius:4px">경험 + 반전 평가</span>
+          <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:3px 8px;border-radius:4px">일상</span>
+        </div>
+        <p style="font-size:14px;line-height:1.55;color:var(--t2);margin-bottom:10px">사실 처음엔 반대였는데, 해보니까 생각이 바뀌었어</p>
+        <button onclick="pickExToday(this.parentElement)" style="width:100%;padding:8px;background:rgba(139,139,245,.08);border:1px solid rgba(139,139,245,.1);border-radius:8px;color:var(--a);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);transition:all .2s">풀어보기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" style="display:flex;border-top:1px solid var(--line);padding:10px 0 30px">
+    <div onclick="goTo('home')" data-nav="home" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--a)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-4 0v-6a1 1 0 011-1h2a1 1 0 011 1v6"/></svg>
+      <span style="font-size:10px;color:var(--a);font-weight:600">홈</span>
+    </div>
+    <div onclick="goTo('map')" data-nav="map" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span style="font-size:10px;color:var(--t4)">구조 지도</span>
+    </div>
+    <div onclick="goTo('log')" data-nav="log" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span style="font-size:10px;color:var(--t4)">내 기록</span>
+    </div>
+    <div onclick="goTo('review')" data-nav="review" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span style="font-size:10px;color:var(--t4)">복습</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ EMPATHY ═══════════════════════════ -->
+<div class="s" id="s-empathy">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 24px;position:relative">
+    <div id="emp-wave" style="position:absolute;top:45%;left:50%;width:6px;height:6px;border-radius:50%;background:var(--a);transform:translate(-50%,-50%)"></div>
+    <div style="position:relative;z-index:1">
+      <p class="fu" id="emp-echo" style="font-size:14px;color:var(--t4);margin-bottom:24px;line-height:1.6;max-width:280px"></p>
+      <div style="animation:sfr .5s ease .25s both">
+        <p style="font-size:26px;font-weight:700;line-height:1.5;letter-spacing:-.8px">아, 이거<br>진짜 답답하지</p>
+      </div>
+      <div style="animation:fu .5s ease .5s both">
+        <p style="font-size:15px;color:var(--t3);margin-top:16px">같이 풀어보자</p>
+      </div>
+      <div style="animation:fu .5s ease .7s both;margin-top:20px">
+        <div style="width:28px;height:3px;border-radius:2px;background:var(--a);animation:pulse 1.4s ease infinite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PRE-CHECK — 사전 인셉션 체크 ═══════════════════════════ -->
+<div class="s" id="s-precheck">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div style="width:10%;height:100%;background:var(--a);border-radius:2px"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">0/5</span>
+  </div>
+
+  <div style="flex:1;padding:0 24px;display:flex;flex-direction:column;justify-content:center">
+    <!-- 원문 다시 보여주기 -->
+    <div class="fu" style="margin-bottom:40px">
+      <div style="background:var(--c);border-radius:16px;padding:18px;border-left:3px solid var(--a)">
+        <p id="precheck-sentence" style="font-size:16px;font-weight:500;line-height:1.65;letter-spacing:-.3px">좋은 아이디어인 건 맞는데, 현실적으로 리소스가 부족하지 않을까요?</p>
+      </div>
+    </div>
+
+    <!-- 질문 -->
+    <div class="fu1" style="margin-bottom:36px">
+      <p style="font-size:22px;font-weight:700;line-height:1.5;letter-spacing:-.5px;margin-bottom:8px">이걸 영어로 말한다면</p>
+      <p style="font-size:15px;color:var(--t3);line-height:1.6">뭐부터 꺼낼 것 같아?</p>
+    </div>
+
+    <!-- 선택지 -->
+    <div class="fu2" style="display:flex;gap:8px;margin-bottom:20px">
+      <button onclick="pickPrecheck('ko')" id="pre-ko" style="flex:1;padding:20px 14px;border-radius:14px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ko);line-height:1.5;transition:all .25s">
+        인정부터<br><span style="font-size:12px;font-weight:400;color:var(--t4)">좋은 아이디어인 건 맞는데…</span>
+      </button>
+      <button onclick="pickPrecheck('en')" id="pre-en" style="flex:1;padding:20px 14px;border-radius:14px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ko);line-height:1.5;transition:all .25s">
+        걱정부터<br><span style="font-size:12px;font-weight:400;color:var(--t4)">리소스가 부족하지 않을까…</span>
+      </button>
+    </div>
+
+    <p class="fu3" style="font-size:12px;color:var(--t4);text-align:center">정답은 없어. 지금 직감대로 골라봐.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ STEP 0 — 구조 설명 ═══════════════════════════ -->
+<div class="s" id="s-step0">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="progress" style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div id="progress-fill" style="width:20%;height:100%;background:var(--a);border-radius:2px;transition:width .5s ease"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">1/5</span>
+  </div>
+
+  <div style="flex:1;padding:0 24px;padding-bottom:40px;overflow-y:auto">
+    <!-- 원문 -->
+    <div class="fu" style="margin-top:8px;margin-bottom:36px">
+      <p style="font-size:12px;color:var(--t4);margin-bottom:10px;font-weight:600;letter-spacing:.3px">원문</p>
+      <div style="background:var(--c);border-radius:16px;padding:18px;border-left:3px solid var(--a)">
+        <p style="font-size:16px;font-weight:500;line-height:1.65;letter-spacing:-.3px">좋은 아이디어인 건 맞는데, 현실적으로 리소스가 부족하지 않을까요?</p>
+      </div>
+    </div>
+
+    <!-- 구조 유형 라벨 -->
+    <div class="fu1" style="margin-bottom:20px">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(139,139,245,.04);border:1px solid rgba(139,139,245,.08)">
+        <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--a)">유형 1</span>
+        <span style="font-size:13px;font-weight:600;color:var(--t2)">양보 + 주장</span>
+        <span style="font-size:11px;color:var(--t4);background:var(--c2);padding:2px 8px;border-radius:4px">업무/논리</span>
+      </div>
+    </div>
+
+    <!-- 한국어 분해 — 영어 어순은 숨김 (Approach A) -->
+    <div class="fu2" style="margin-bottom:32px">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:10px;font-weight:600;letter-spacing:.3px">이 문장이 하는 일</p>
+      <div style="background:var(--c);border-radius:16px;padding:18px;border:1px solid var(--line)">
+        <p style="font-size:14px;line-height:1.8;letter-spacing:-.2px;color:var(--t2)">
+          앞에서 <span style="color:var(--ok);font-weight:600">"좋은 아이디어"</span>라고 인정하고 나서,<br>
+          뒤에서 <span style="color:var(--w);font-weight:600">"리소스가 부족하지 않을까"</span>라고 걱정을 꺼내고 있어.
+        </p>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <p style="font-size:12px;color:var(--t3);line-height:1.5">
+            <span style="font-weight:600;color:var(--t4)">핵심 구조:</span> 인정 → 전환 → 걱정
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 전환점 퀴즈 -->
+    <div class="fu-quiz" id="s0-quiz" style="margin-bottom:32px">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:12px;font-weight:600;letter-spacing:.3px">이 문장의 전환점은?</p>
+      <div style="display:flex;gap:8px">
+        <button onclick="pickPivot('correct')" id="pv-a" style="flex:1;padding:14px;border-radius:14px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);line-height:1.5;transition:all .25s">
+          맞는데<br><span style="font-size:11px;font-weight:400;color:var(--t4)">"좋긴 한데…" 하고 꺾는 지점</span>
+        </button>
+        <button onclick="pickPivot('wrong')" id="pv-b" style="flex:1;padding:14px;border-radius:14px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);line-height:1.5;transition:all .25s">
+          부족하지 않을까<br><span style="font-size:11px;font-weight:400;color:var(--t4)">걱정을 꺼내는 지점</span>
+        </button>
+      </div>
+      <div id="s0-quiz-fb" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;background:rgba(94,196,146,.04);border:1px solid rgba(94,196,146,.08)">
+        <p style="font-size:12px;color:var(--ok);line-height:1.6;font-weight:500">"맞는데"가 전환점이야. 앞의 인정을 뒤의 걱정으로 꺾어주는 역할을 해.</p>
+      </div>
+    </div>
+
+    <!-- 블록 선택 (퀴즈 후 공개) -->
+    <div class="fu3" id="s0-blocks-wrap" style="margin-bottom:32px;display:none">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:12px;font-weight:600;letter-spacing:.3px">이제 블록을 눌러서 문장을 만들어봐</p>
+      <div style="display:flex;flex-direction:column;gap:6px" id="ph-blocks">
+        <div onclick="tapBlock('b1')" id="bl-b1" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">1</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">That's a great idea</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+        <div onclick="tapBlock('b2')" id="bl-b2" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">2</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">I'm a bit concerned</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+        <div onclick="tapBlock('b3')" id="bl-b3" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">3</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">we might not have enough resources</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+      </div>
+      <div style="display:none;flex-direction:column;gap:6px" id="ph-conn">
+        <p style="font-size:13px;color:var(--t4);margin-bottom:6px;font-weight:600;letter-spacing:.3px">연결어를 선택해봐</p>
+        <div onclick="tapConn('but')" class="cn" data-c="but" style="padding:12px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;transition:all .2s">
+          <p class="cn-label" style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--en);margin-bottom:4px">but</p>
+          <p class="cn-detail" style="font-size:11px;color:var(--t4);max-height:0;overflow:hidden;transition:max-height .2s">강하고 직접적인 반대</p>
+        </div>
+        <div onclick="tapConn('although')" class="cn" data-c="although" style="padding:12px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;transition:all .2s">
+          <p class="cn-label" style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--en);margin-bottom:4px">although</p>
+          <p class="cn-detail" style="font-size:11px;color:var(--t4);max-height:0;overflow:hidden;transition:max-height .2s">살짝 부드러운 반대</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="fu4" id="pv" style="padding:18px;background:var(--c);border-radius:16px;border:1px solid var(--line)">
+      <p style="font-size:11px;color:var(--t4);margin-bottom:8px;font-weight:600;letter-spacing:.3px">Preview</p>
+      <p id="pv-text" style="font-size:13px;color:var(--t4);line-height:1.6;margin-bottom:8px">블록을 눌러서 문장을 만들어봐</p>
+      <p style="font-size:11px;color:var(--t4)">선택됨: <span id="pv-count" style="font-family:var(--en)">0/3</span></p>
+    </div>
+  </div>
+
+  <div style="padding:24px">
+    <button id="btn-go2" onclick="goStep2()" class="btn btn-disabled">문장 검토하기</button>
+  </div>
+
+  <!-- Side line visual -->
+  <div id="side-line" style="position:absolute;right:24px;top:300px;width:2px;background:var(--a);height:0;border-radius:1px;transition:all .3s ease;z-index:0"></div>
+</div>
+
+<!-- ═══════════════════════════ STEP 1 — 블록 조립 ═══════════════════════════ -->
+<div class="s" id="s-step1">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div style="width:40%;height:100%;background:var(--a);border-radius:2px"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">2/5</span>
+  </div>
+
+  <div style="flex:1;padding:0 24px;padding-bottom:40px;overflow-y:auto">
+    <div class="fu" style="margin-top:8px;margin-bottom:20px">
+      <p style="font-size:12px;color:var(--t4);margin-bottom:10px;font-weight:600;letter-spacing:.3px">원문</p>
+      <div style="background:var(--c);border-radius:16px;padding:18px;border-left:3px solid var(--a)">
+        <p style="font-size:16px;font-weight:500;line-height:1.65;letter-spacing:-.3px">좋은 아이디어인 건 맞는데, 현실적으로 리소스가 부족하지 않을까요?</p>
+      </div>
+    </div>
+
+    <div class="fu1" style="margin-bottom:32px">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:12px;font-weight:600;letter-spacing:.3px">이제 블록을 눌러서 문장을 만들어봐</p>
+      <div style="display:flex;flex-direction:column;gap:6px" id="ph-blocks">
+        <div onclick="tapBlock('b1')" id="bl-b1" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">1</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">That's a great idea</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+        <div onclick="tapBlock('b2')" id="bl-b2" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">2</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">I'm a bit concerned</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+        <div onclick="tapBlock('b3')" id="bl-b3" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);width:20px">3</span>
+          <div style="flex:1">
+            <p class="bl-en" style="font-size:14px;font-weight:500;color:var(--t2);font-family:var(--en)">we might not have enough resources</p>
+          </div>
+          <div class="bl-num" style="width:24px;height:24px;background:var(--c2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t4)"></div>
+        </div>
+      </div>
+      <div style="display:none;flex-direction:column;gap:6px" id="ph-conn">
+        <p style="font-size:13px;color:var(--t4);margin-bottom:6px;font-weight:600;letter-spacing:.3px">연결어를 선택해봐</p>
+        <div onclick="tapConn('but')" class="cn" data-c="but" style="padding:12px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;transition:all .2s">
+          <p class="cn-label" style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--en);margin-bottom:4px">but</p>
+          <p class="cn-detail" style="font-size:11px;color:var(--t4);max-height:0;overflow:hidden;transition:max-height .2s">강하고 직접적인 반대</p>
+        </div>
+        <div onclick="tapConn('although')" class="cn" data-c="although" style="padding:12px 16px;background:var(--c);border-radius:14px;border:1.5px solid transparent;cursor:pointer;transition:all .2s">
+          <p class="cn-label" style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--en);margin-bottom:4px">although</p>
+          <p class="cn-detail" style="font-size:11px;color:var(--t4);max-height:0;overflow:hidden;transition:max-height .2s">살짝 부드러운 반대</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fu2" id="pv" style="padding:18px;background:var(--c);border-radius:16px;border:1px solid var(--line)">
+      <p style="font-size:11px;color:var(--t4);margin-bottom:8px;font-weight:600;letter-spacing:.3px">Preview</p>
+      <p id="pv-text" style="font-size:13px;color:var(--t4);line-height:1.6;margin-bottom:8px">블록을 눌러서 문장을 만들어봐</p>
+      <p style="font-size:11px;color:var(--t4)">선택됨: <span id="pv-count" style="font-family:var(--en)">0/3</span></p>
+    </div>
+  </div>
+
+  <div style="padding:24px">
+    <button id="btn-go2" onclick="goStep2()" class="btn btn-disabled">문장 검토하기</button>
+  </div>
+
+  <div id="side-line" style="position:absolute;right:24px;top:300px;width:2px;background:var(--a);height:0;border-radius:1px;transition:all .3s ease;z-index:0"></div>
+</div>
+
+<!-- ═══════════════════════════ STEP 2 — 피드백 ═══════════════════════════ -->
+<div class="s" id="s-step2">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div style="width:60%;height:100%;background:var(--a);border-radius:2px"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">3/5</span>
+  </div>
+
+  <div style="flex:1;padding:0 24px;padding-bottom:40px;overflow-y:auto">
+    <div class="fu" id="fb2-box" style="padding:18px;background:var(--c);border-radius:16px;border:1px solid var(--line);margin-bottom:20px">
+      <p id="fb2-title" style="font-size:18px;font-weight:700;margin-bottom:12px">맞았어</p>
+      <p id="fb2-sentence" style="font-size:14px;font-family:var(--en);line-height:1.6;color:var(--t2);margin-bottom:16px">That's a great idea, but I'm a bit concerned we might not have enough resources.</p>
+      <p id="fb2-sub" style="font-size:13px;color:var(--t4);line-height:1.6">어순이랑 연결어 둘 다 잘 잡았어</p>
+    </div>
+
+    <div class="fu1" style="padding:18px;background:var(--c);border-radius:16px;border:1px solid var(--line);margin-bottom:20px">
+      <p style="font-size:13px;color:var(--t3);margin-bottom:12px;line-height:1.6" id="fb2-explain">상대 의견을 먼저 인정하고 "but"으로 우려를 연결하면 공격적이지 않으면서 명확하게 전달돼. 회의에서 아주 자주 쓰이는 순서야.</p>
+    </div>
+
+    <!-- 어순 비교 — Step 0에서 숨긴 정보를 피드백에서 공개 (Approach A) -->
+    <div class="fu2" style="padding:18px;background:var(--c);border-radius:16px;border:1px solid var(--line)">
+      <p style="font-size:12px;font-weight:600;color:var(--t4);margin-bottom:14px;letter-spacing:.3px">어순 비교</p>
+
+      <!-- 한국어 어순 -->
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--t4);font-family:var(--en)">한국어</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="padding:6px 12px;border-radius:8px;font-size:13px;font-weight:500;background:rgba(94,196,146,.06);border:1px solid rgba(94,196,146,.12);color:var(--ok)">인정</span>
+          <span style="padding:6px 8px;font-size:11px;color:var(--t4)">→</span>
+          <span style="padding:6px 12px;border-radius:8px;font-size:13px;font-weight:500;background:rgba(212,151,90,.06);border:1px solid rgba(212,151,90,.12);color:var(--w)">걱정</span>
+        </div>
+      </div>
+
+      <!-- 영어 어순 -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--t4);font-family:var(--en)">ENGLISH</span>
+          <span style="font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--a);background:rgba(139,139,245,.08);padding:2px 6px;border-radius:4px;font-family:var(--en)">REVERSED</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="padding:6px 12px;border-radius:8px;font-size:13px;font-weight:500;background:rgba(94,196,146,.06);border:1px solid rgba(94,196,146,.12);color:var(--ok)">인정</span>
+          <span style="padding:6px 8px;font-size:11px;color:var(--a);font-weight:700">but</span>
+          <span style="padding:6px 12px;border-radius:8px;font-size:13px;font-weight:500;background:rgba(212,151,90,.06);border:1px solid rgba(212,151,90,.12);color:var(--w)">걱정</span>
+        </div>
+      </div>
+
+      <div style="padding:10px 14px;background:rgba(139,139,245,.03);border-radius:10px;border:1px solid rgba(139,139,245,.06)">
+        <p style="font-size:12px;color:var(--t3);line-height:1.6">
+          <span style="font-weight:600;color:var(--a)">핵심:</span> 영어는 하고 싶은 말을 먼저 꺼내. 이 문장에서는 인정이 먼저, 걱정이 뒤 — 한국어와 같은 순서야. 하지만 <span style="font-family:var(--en);font-weight:600">but</span>이 전환점을 명확하게 찍어줘.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:24px">
+    <button id="fb2-btn" onclick="goTo('step3')" class="btn btn-primary">이 패턴 내 걸로 만들기</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ STEP 3 — 사고 전환 체크 ═══════════════════════════ -->
+<div class="s" id="s-step3">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div style="width:80%;height:100%;background:var(--a);border-radius:2px"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">4/5</span>
+  </div>
+  <div style="flex:1;padding:0 24px;padding-bottom:40px">
+    <!-- Saved pattern -->
+    <div class="fu" style="background:var(--c);border-radius:16px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,var(--a),transparent)"></div>
+      <p style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.5px;margin-bottom:12px;font-family:var(--en)">PATTERN SAVED</p>
+      <p style="font-size:18px;font-weight:600;font-family:var(--en);line-height:1.5;letter-spacing:-.3px;margin-bottom:12px">
+        That's a great idea, <span style="color:var(--a)">but</span> I'm a bit concerned ~
+      </p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--t3);background:var(--c2);padding:4px 10px;border-radius:6px">회의 반대</span>
+        <span style="font-size:11px;color:var(--t3);background:var(--c2);padding:4px 10px;border-radius:6px">제안 거절</span>
+        <span style="font-size:11px;color:var(--t3);background:var(--c2);padding:4px 10px;border-radius:6px">피드백</span>
+      </div>
+    </div>
+
+    <!-- 원문 → 영문 -->
+    <div class="fu1" style="background:var(--c);border-radius:16px;padding:18px;margin-bottom:36px">
+      <p style="font-size:13px;color:var(--t3);line-height:1.6;margin-bottom:8px">좋은 아이디어인 건 맞는데, 리소스가 부족하지 않을까요?</p>
+      <div style="width:20px;height:1px;background:var(--line);margin:8px 0"></div>
+      <p style="font-size:14px;font-weight:600;font-family:var(--en);color:var(--t2);line-height:1.6">That's a great idea, but I'm a bit concerned we might not have enough resources.</p>
+    </div>
+
+    <!-- Before / After 인셉션 비교 -->
+    <div class="fu2" id="s3-compare" style="margin-bottom:32px">
+      <div style="background:rgba(139,139,245,.03);border:1px solid rgba(139,139,245,.08);border-radius:16px;padding:22px 20px">
+        <p style="font-size:13px;font-weight:600;color:var(--t4);margin-bottom:16px;letter-spacing:.3px">사고 순서 체크</p>
+
+        <!-- Before -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="width:40px;text-align:center">
+            <span style="font-size:10px;font-weight:700;color:var(--t4);letter-spacing:.5px;font-family:var(--en)">BEFORE</span>
+          </div>
+          <div id="s3-before" style="flex:1;padding:12px 14px;background:var(--c);border-radius:10px">
+            <p style="font-size:13px;color:var(--t3)"><span id="s3-before-label" style="font-weight:600"></span></p>
+          </div>
+        </div>
+
+        <!-- After -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:40px;text-align:center">
+            <span style="font-size:10px;font-weight:700;color:var(--a);letter-spacing:.5px;font-family:var(--en)">AFTER</span>
+          </div>
+          <div style="flex:1">
+            <p style="font-size:15px;font-weight:600;color:var(--t2);margin-bottom:6px">방금 조립할 때는?</p>
+            <div style="display:flex;gap:8px">
+              <button onclick="pickAfter('ko')" id="after-ko" style="flex:1;padding:10px;border-radius:10px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--ko);transition:all .25s">
+                인정부터
+              </button>
+              <button onclick="pickAfter('en')" id="after-en" style="flex:1;padding:10px;border-radius:10px;background:var(--c);border:1.5px solid var(--line);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--ko);transition:all .25s">
+                걱정부터
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="s3-verdict" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="fu3">
+      <button id="btn-s3" onclick="goTo('step4')" class="btn btn-disabled">다음</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ STEP 4 — 완료 ═══════════════════════════ -->
+<div class="s" id="s-step4">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <div style="width:40px"></div>
+    <div style="flex:1;margin:0 20px;height:3px;background:var(--c2);border-radius:2px;overflow:hidden">
+      <div style="width:100%;height:100%;background:var(--a);border-radius:2px"></div>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--a)">✓</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 24px;padding-bottom:40px">
+    <div class="fu">
+      <p style="font-size:32px;font-weight:700;letter-spacing:-1px;margin-bottom:8px">하나 풀었다</p>
+      <p style="font-size:15px;color:var(--t3);margin-bottom:36px;line-height:1.6">다음에 비슷한 상황 오면 떠올려봐</p>
+    </div>
+
+    <div class="fu1" style="display:flex;align-items:center;gap:14px;background:var(--c);border-radius:16px;padding:18px;margin-bottom:44px">
+      <div style="position:relative;flex-shrink:0">
+        <svg width="52" height="52"><circle cx="26" cy="26" r="22" fill="none" stroke="var(--c2)" stroke-width="4"/><circle cx="26" cy="26" r="22" fill="none" stroke="var(--a)" stroke-width="4" stroke-linecap="round" transform="rotate(-90 26 26)" stroke-dasharray="56.5 81.6"/></svg>
+        <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;font-weight:700;font-family:var(--en);color:var(--a)">41</span>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:14px;font-family:var(--en);color:var(--t3)">39%</span>
+          <svg width="14" height="14" fill="none" stroke="var(--ok)" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m0 0l-4-4m4 4l-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:16px;font-weight:700;font-family:var(--en);color:var(--a)">41%</span>
+        </div>
+        <p style="font-size:12px;color:var(--t4)">사고 전환율</p>
+      </div>
+    </div>
+
+    <!-- Level 2 해금 배너 (같은 유형 3회 정답 시 표시) -->
+    <div class="fu-lv2" id="lv2-banner" style="display:none;margin-bottom:24px;padding:18px;background:rgba(139,139,245,.03);border:1px solid rgba(139,139,245,.08);border-radius:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--a);font-family:var(--en);background:rgba(139,139,245,.08);padding:3px 8px;border-radius:4px">LEVEL UP</span>
+      </div>
+      <p style="font-size:15px;font-weight:600;color:var(--t2);margin-bottom:6px">양보+주장 유형을 3번 연속 맞혔어</p>
+      <p style="font-size:13px;color:var(--t3);line-height:1.5;margin-bottom:14px">다음부터 이 유형은 직접 골라보는 걸로 올라갈까?</p>
+      <div style="display:flex;gap:8px">
+        <button onclick="goTo('level2-demo');fullReset()" style="flex:1;padding:10px;border-radius:10px;background:var(--a);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko)">좋아, 해볼게</button>
+        <button onclick="document.getElementById('lv2-banner').style.display='none'" style="flex:1;padding:10px;border-radius:10px;background:var(--c);border:1px solid var(--line);color:var(--t3);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--ko)">아직은 괜찮아</button>
+      </div>
+    </div>
+
+    <div class="fu2"><button onclick="goTo('home');fullReset()" class="btn btn-primary">하나 더 풀어볼래</button></div>
+    <div class="fu3"><button onclick="goTo('home');fullReset()" class="btn btn-ghost" style="margin-top:6px">됐어, 오늘은 여기까지</button></div>
+    <div class="fu4" style="margin-top:12px;text-align:center">
+      <button onclick="document.getElementById('lv2-banner').style.display='block';this.style.display='none'" style="background:none;border:none;color:var(--t4);font-size:11px;cursor:pointer;font-family:var(--en);text-decoration:underline">Level 2 demo ↗</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ LEVEL 2 DEMO — 유형 직접 선택 ═══════════════════════════ -->
+<div class="s" id="s-level2-demo">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('home');fullReset()" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--a);font-family:var(--en);background:rgba(139,139,245,.08);padding:3px 8px;border-radius:4px">LEVEL 2</span>
+    </div>
+    <span style="font-size:12px;font-family:var(--en);color:var(--t4)">1/5</span>
+  </div>
+
+  <div style="flex:1;padding:0 24px;padding-bottom:40px;overflow-y:auto">
+    <!-- 원문 -->
+    <div class="fu" style="margin-top:8px;margin-bottom:36px">
+      <p style="font-size:12px;color:var(--t4);margin-bottom:10px;font-weight:600;letter-spacing:.3px">원문</p>
+      <div style="background:var(--c);border-radius:16px;padding:18px;border-left:3px solid var(--a)">
+        <p style="font-size:16px;font-weight:500;line-height:1.65;letter-spacing:-.3px">좋은 아이디어인 건 맞는데, 현실적으로 리소스가 부족하지 않을까요?</p>
+      </div>
+    </div>
+
+    <!-- 유형 선택 (Level 1에서는 앱이 알려줬던 것) -->
+    <div style="margin-bottom:32px">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:12px;font-weight:600;letter-spacing:.3px">이 문장은 어떤 구조일까?</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="pickType(this,'correct')" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid var(--line);cursor:pointer;text-align:left;transition:all .25s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);display:block;margin-bottom:2px">유형 1</span>
+          <span style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--ko)">양보 + 주장</span>
+        </button>
+        <button onclick="pickType(this,'wrong')" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid var(--line);cursor:pointer;text-align:left;transition:all .25s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);display:block;margin-bottom:2px">유형 5</span>
+          <span style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--ko)">완곡한 반대/유보</span>
+        </button>
+        <button onclick="pickType(this,'wrong')" style="padding:14px 16px;background:var(--c);border-radius:14px;border:1.5px solid var(--line);cursor:pointer;text-align:left;transition:all .25s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);display:block;margin-bottom:2px">유형 4</span>
+          <span style="font-size:14px;font-weight:600;color:var(--t2);font-family:var(--ko)">이유 + 결론</span>
+        </button>
+      </div>
+      <div id="lv2-type-fb" style="display:none;margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ 구조 지도 (s-map) ═══════════════════════════ -->
+<div class="s" id="s-map">
+  <!-- Header -->
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--a),#6B6BF5);display:flex;align-items:center;justify-content:center">
+        <span style="font-size:13px;font-weight:700;font-family:var(--en);color:#fff">E</span>
+      </div>
+      <span style="font-size:15px;font-weight:600;font-family:var(--en);color:var(--t2);letter-spacing:-.5px">eng-ception</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div style="flex:1;padding:16px 24px;overflow-y:auto">
+    <!-- Progress bar -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <p style="font-size:13px;color:var(--t4);font-weight:600">경험한 유형</p>
+        <p style="font-size:13px;color:var(--t2);font-weight:600;font-family:var(--en)">4/10</p>
+      </div>
+      <div style="width:100%;height:6px;background:var(--c2);border-radius:3px;overflow:hidden">
+        <div style="width:40%;height:100%;background:var(--a);border-radius:3px"></div>
+      </div>
+    </div>
+
+    <!-- 업무/논리 -->
+    <div class="fu" style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--a);border-radius:1px;display:inline-block"></span>
+        업무/논리
+      </p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div onclick="goTypeDetail(1)" style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--a);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--a);min-width:16px">1</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:2px">양보 + 주장</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">Though ~, I believe ~</p>
+          </div>
+          <div style="display:flex;gap:2px"><div style="width:5px;height:5px;border-radius:50%;background:var(--a)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--a)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--a)"></div></div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">2</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">조건 + 결론</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">If we ~, then ~</p>
+          </div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">3</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">주장 + 근거</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">This is important because ~</p>
+          </div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">4</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">이유 + 결론</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">We should ~ because ~</p>
+          </div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">5</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">완곡한 반대/유보</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">Not necessarily, but ~</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일상/경험 -->
+    <div class="fu1" style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--ok);border-radius:1px;display:inline-block"></span>
+        일상/경험
+      </p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div onclick="goTypeDetail(6)" style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--ok);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--a);min-width:16px">6</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:2px">경험 + 반전 평가</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">I ~, and it turned out ~</p>
+          </div>
+          <div style="display:flex;gap:2px"><div style="width:5px;height:5px;border-radius:50%;background:var(--ok)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--c2)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--c2)"></div></div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">7</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">원인 추론</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">I think it's probably because ~</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 감정/관계 -->
+    <div class="fu2" style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--w);border-radius:1px;display:inline-block"></span>
+        감정/관계
+      </p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div onclick="goTypeDetail(8)" style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--w);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--a);min-width:16px">8</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:2px">원인 + 감정 반응</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">I felt ~ when you ~</p>
+          </div>
+          <div style="display:flex;gap:2px"><div style="width:5px;height:5px;border-radius:50%;background:var(--c2)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--c2)"></div><div style="width:5px;height:5px;border-radius:50%;background:var(--c2)"></div></div>
+        </div>
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">9</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">정도/강조 + 감정</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">You have no idea how ~</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 성장/자기표현 -->
+    <div class="fu3" style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--t4);border-radius:1px;display:inline-block"></span>
+        성장/자기표현
+      </p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="padding:14px 16px;background:var(--c);border-radius:14px;border-left:3px solid var(--c2);display:flex;align-items:center;gap:12px;opacity:.5">
+          <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--t4);min-width:16px">10</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:500;color:var(--t3);margin-bottom:2px">약점 인정 + 개선</p>
+            <p style="font-size:12px;font-family:var(--en);color:var(--t4)">I tend to ~, but I've been working on ~</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 커버리지 안내 -->
+    <div style="padding:16px;background:rgba(139,139,245,.02);border:1px solid rgba(139,139,245,.06);border-radius:14px">
+      <p style="font-size:12px;color:var(--t4);line-height:1.65">이 10개 구조로 한국어 사고의 약 <span style="color:var(--t3);font-weight:600">80%</span>를 커버해. 나머지는 구조보다 표현의 문제야.</p>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" style="display:flex;border-top:1px solid var(--line);padding:10px 0 30px">
+    <div onclick="goTo('home')" data-nav="home" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-4 0v-6a1 1 0 011-1h2a1 1 0 011 1v6"/></svg>
+      <span style="font-size:10px;color:var(--t4)">홈</span>
+    </div>
+    <div onclick="goTo('map')" data-nav="map" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--a)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span style="font-size:10px;color:var(--a);font-weight:600">구조 지도</span>
+    </div>
+    <div onclick="goTo('log')" data-nav="log" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span style="font-size:10px;color:var(--t4)">내 기록</span>
+    </div>
+    <div onclick="goTo('review')" data-nav="review" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span style="font-size:10px;color:var(--t4)">복습</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ 구조 지도 드릴다운 (s-type-detail) ═══════════════════════════ -->
+<div class="s" id="s-type-detail">
+  <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="goTo('map')" style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--ko)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div style="flex:1"></div>
+  </div>
+
+  <div style="flex:1;padding:0 24px;padding-bottom:40px;overflow-y:auto">
+    <!-- Header -->
+    <div class="fu" style="margin-bottom:20px">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(139,139,245,.04);border:1px solid rgba(139,139,245,.08);margin-bottom:12px">
+        <span style="font-size:12px;font-weight:700;font-family:var(--en);color:var(--a)">유형 1</span>
+        <span style="font-size:13px;font-weight:600;color:var(--t2)">양보 + 주장</span>
+      </div>
+      <p style="font-size:13px;color:var(--t4)">물론 ~이긴 한데, ~라고 본다</p>
+      <p style="font-size:12px;font-family:var(--en);color:var(--t4);margin-top:6px">While I appreciate ~, I believe ~ / That's a great idea, but ~</p>
+    </div>
+
+    <!-- Practiced sentences -->
+    <div class="fu1" style="margin-bottom:24px">
+      <p style="font-size:13px;color:var(--t4);margin-bottom:12px;font-weight:600;letter-spacing:.3px">풀어본 문장</p>
+
+      <!-- Card 1 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span style="font-size:10px;color:var(--t1);background:var(--a);padding:3px 8px;border-radius:4px;font-weight:600">직접 등록</span>
+          <span style="font-size:10px;color:var(--t4);font-family:var(--en)">4월 5일</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:8px">좋은 아이디어인 건 맞는데, 리소스가 부족하지 않을까요?</p>
+        <div style="width:100%;height:1px;background:var(--line);margin:8px 0"></div>
+        <p style="font-size:13px;font-family:var(--en);color:var(--t3);line-height:1.55;margin-bottom:8px">That's a great idea, but I'm a bit concerned we might not have enough resources.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">but</span>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span style="font-size:10px;color:#fff;background:var(--a);padding:3px 8px;border-radius:4px;font-weight:600">오늘의 문장</span>
+          <span style="font-size:10px;color:var(--t4);font-family:var(--en)">4월 3일</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:8px">물론 재택근무가 편하긴 한데, 팀워크가 걱정돼</p>
+        <div style="width:100%;height:1px;background:var(--line);margin:8px 0"></div>
+        <p style="font-size:13px;font-family:var(--en);color:var(--t3);line-height:1.55;margin-bottom:8px">I'm worried about teamwork, though working from home is convenient.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">though</span>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span style="font-size:10px;color:var(--t1);background:var(--t4);padding:3px 8px;border-radius:4px;font-weight:600">직접 등록</span>
+          <span style="font-size:10px;color:var(--t4);font-family:var(--en)">3월 28일</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:8px">그 방법도 나쁘진 않은데, 시간이 너무 오래 걸릴 것 같아요</p>
+        <div style="width:100%;height:1px;background:var(--line);margin:8px 0"></div>
+        <p style="font-size:13px;font-family:var(--en);color:var(--t3);line-height:1.55;margin-bottom:8px">That approach isn't bad, although I think it might take too long.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">although</span>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--w)"></div>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="goTo('step1')" class="btn btn-primary">다시 풀기</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ 내 기록 (s-log) ═══════════════════════════ -->
+<div class="s" id="s-log">
+  <!-- Header -->
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--a),#6B6BF5);display:flex;align-items:center;justify-content:center">
+        <span style="font-size:13px;font-weight:700;font-family:var(--en);color:#fff">E</span>
+      </div>
+      <span style="font-size:15px;font-weight:600;font-family:var(--en);color:var(--t2);letter-spacing:-.5px">eng-ception</span>
+    </div>
+  </div>
+
+  <!-- Content — "얼마나 했나" 중심 (문장 상세는 구조 지도에서) -->
+  <div style="flex:1;padding:16px 24px;overflow-y:auto">
+
+    <!-- 연속 학습 스트릭 -->
+    <div style="background:var(--c);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center">
+      <p style="font-size:36px;font-weight:700;font-family:var(--en);color:var(--a);margin-bottom:4px">5일</p>
+      <p style="font-size:13px;color:var(--t3);margin-bottom:16px">연속 학습 중</p>
+      <!-- 주간 dots -->
+      <div style="display:flex;justify-content:center;gap:10px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">M</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">T</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">W</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">T</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span style="font-size:9px;color:var(--a);font-weight:600;font-family:var(--en)">F</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--c2);display:flex;align-items:center;justify-content:center"></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">S</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--c2);display:flex;align-items:center;justify-content:center"></div>
+          <span style="font-size:9px;color:var(--t4);font-family:var(--en)">S</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 핵심 지표 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px">
+      <div style="background:var(--c);border-radius:12px;padding:16px">
+        <p style="font-size:24px;font-weight:700;font-family:var(--en);color:var(--a);margin-bottom:2px">41%</p>
+        <p style="font-size:11px;color:var(--t4)">사고 전환율</p>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:6px">
+          <svg width="10" height="10" fill="none" stroke="var(--ok)" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m0 0l-4-4m4 4l-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:10px;color:var(--ok);font-family:var(--en)">+5% this week</span>
+        </div>
+      </div>
+      <div style="background:var(--c);border-radius:12px;padding:16px">
+        <p style="font-size:24px;font-weight:700;font-family:var(--en);color:var(--a);margin-bottom:2px">12</p>
+        <p style="font-size:11px;color:var(--t4)">풀어본 문장</p>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:6px">
+          <span style="font-size:10px;color:var(--t4);font-family:var(--en)">이번 주 5개</span>
+        </div>
+      </div>
+      <div style="background:var(--c);border-radius:12px;padding:16px">
+        <p style="font-size:24px;font-weight:700;font-family:var(--en);color:var(--a);margin-bottom:2px">4/10</p>
+        <p style="font-size:11px;color:var(--t4)">경험한 유형</p>
+      </div>
+      <div style="background:var(--c);border-radius:12px;padding:16px">
+        <p style="font-size:24px;font-weight:700;font-family:var(--en);color:var(--a);margin-bottom:2px">Lv.1</p>
+        <p style="font-size:11px;color:var(--t4)">현재 레벨</p>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:6px">
+          <span style="font-size:10px;color:var(--t4)">양보+주장 Lv.2 근접</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이번 주 활동 요약 -->
+    <div style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px">이번 주 활동</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:var(--c);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--t4);font-family:var(--en);min-width:36px">오늘</span>
+            <span style="font-size:13px;color:var(--t2)">오늘의 문장 1개</span>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+        <div style="background:var(--c);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--t4);font-family:var(--en);min-width:36px">4/7</span>
+            <span style="font-size:13px;color:var(--t2)">직접 등록 1개 · 복습 2개</span>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+        <div style="background:var(--c);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--t4);font-family:var(--en);min-width:36px">4/6</span>
+            <span style="font-size:13px;color:var(--t2)">오늘의 문장 1개 · 복습 1개</span>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+        <div style="background:var(--c);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--t4);font-family:var(--en);min-width:36px">4/5</span>
+            <span style="font-size:13px;color:var(--t2)">직접 등록 2개</span>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+        <div style="background:var(--c);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--t4);font-family:var(--en);min-width:36px">4/4</span>
+            <span style="font-size:13px;color:var(--t2)">오늘의 문장 1개</span>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사고 전환율 추이 -->
+    <div style="margin-bottom:24px">
+      <p style="font-size:13px;font-weight:600;color:var(--t3);margin-bottom:12px">사고 전환율 추이</p>
+      <div style="background:var(--c);border-radius:14px;padding:16px">
+        <div style="display:flex;align-items:flex-end;gap:6px;height:60px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;background:var(--c2);border-radius:3px;height:18px"></div>
+            <span style="font-size:9px;color:var(--t4);font-family:var(--en)">W1</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;background:rgba(139,139,245,.3);border-radius:3px;height:30px"></div>
+            <span style="font-size:9px;color:var(--t4);font-family:var(--en)">W2</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;background:rgba(139,139,245,.5);border-radius:3px;height:38px"></div>
+            <span style="font-size:9px;color:var(--t4);font-family:var(--en)">W3</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;background:var(--a);border-radius:3px;height:48px"></div>
+            <span style="font-size:9px;color:var(--a);font-weight:600;font-family:var(--en)">W4</span>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--t4);margin-top:10px;text-align:center">꾸준히 올라가고 있어</p>
+      </div>
+    </div>
+
+    <!-- CTA: 구조 지도로 -->
+    <div style="padding:14px;background:rgba(139,139,245,.03);border:1px solid rgba(139,139,245,.06);border-radius:14px;text-align:center">
+      <p style="font-size:12px;color:var(--t3);margin-bottom:8px">어떤 유형을 배웠는지 보려면</p>
+      <button onclick="goTo('map')" style="background:none;border:none;color:var(--a);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko)">구조 지도 보기 →</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" style="display:flex;border-top:1px solid var(--line);padding:10px 0 30px">
+    <div onclick="goTo('home')" data-nav="home" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-4 0v-6a1 1 0 011-1h2a1 1 0 011 1v6"/></svg>
+      <span style="font-size:10px;color:var(--t4)">홈</span>
+    </div>
+    <div onclick="goTo('map')" data-nav="map" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span style="font-size:10px;color:var(--t4)">구조 지도</span>
+    </div>
+    <div onclick="goTo('log')" data-nav="log" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--a)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span style="font-size:10px;color:var(--a);font-weight:600">내 기록</span>
+    </div>
+    <div onclick="goTo('review')" data-nav="review" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span style="font-size:10px;color:var(--t4)">복습</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ 복습 (s-review) ═══════════════════════════ -->
+<div class="s" id="s-review">
+  <!-- Header -->
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--a),#6B6BF5);display:flex;align-items:center;justify-content:center">
+        <span style="font-size:13px;font-weight:700;font-family:var(--en);color:#fff">E</span>
+      </div>
+      <span style="font-size:15px;font-weight:600;font-family:var(--en);color:var(--t2);letter-spacing:-.5px">eng-ception</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div style="flex:1;padding:16px 24px;overflow-y:auto">
+    <!-- Title -->
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <h2 style="font-size:18px;font-weight:700">오늘 복습할 문장</h2>
+        <span style="background:var(--c);color:var(--a);font-family:var(--en);font-weight:700;font-size:11px;padding:4px 8px;border-radius:6px">3</span>
+      </div>
+      <p style="font-size:13px;color:var(--t4)">틀렸거나 아직 낯선 패턴을 우선으로 골라왔어</p>
+    </div>
+
+    <!-- Review cards -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+      <!-- Card 1 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;border-left:3px solid var(--w)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">유형 2 조건+결론</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:10px">이 상황을 고려하면 일정을 미루는 게 낫지 않을까요?</p>
+        <p style="font-size:11px;color:var(--t4);margin-bottom:10px">3월 28일 · 1회차에서 틀림</p>
+        <button onclick="goTo('step1')" style="width:100%;padding:8px;background:rgba(139,139,245,.08);border:1px solid rgba(139,139,245,.1);border-radius:8px;color:var(--a);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);transition:all .2s">복습하기</button>
+      </div>
+
+      <!-- Card 2 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;border-left:3px solid var(--w)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">유형 8 원인+감정</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:10px">네가 그렇게 말하니까 진짜 허탈하더라</p>
+        <p style="font-size:11px;color:var(--t4);margin-bottom:10px">3월 28일 · 아직 익숙하지 않음</p>
+        <button onclick="goTo('step1')" style="width:100%;padding:8px;background:rgba(139,139,245,.08);border:1px solid rgba(139,139,245,.1);border-radius:8px;color:var(--a);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);transition:all .2s">복습하기</button>
+      </div>
+
+      <!-- Card 3 -->
+      <div style="background:var(--c);border-radius:14px;padding:14px;border-left:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <span style="font-size:10px;color:var(--t3);background:var(--c2);padding:3px 8px;border-radius:4px">유형 6 경험+반전</span>
+        </div>
+        <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:10px;opacity:.7">원래 그쪽으로 가려고 했는데, 길이 막혀서 돌아왔어</p>
+        <p style="font-size:11px;color:var(--t4);margin-bottom:10px;opacity:.7">4월 3일 · 2회차</p>
+        <button onclick="goTo('step1')" style="width:100%;padding:8px;background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--t4);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ko);transition:all .2s;opacity:.6">복습하기</button>
+      </div>
+    </div>
+
+    <!-- Completed section -->
+    <div style="padding:12px;background:rgba(94,196,146,.03);border-radius:12px">
+      <p style="font-size:12px;color:var(--t4);font-weight:600;margin-bottom:8px">복습 완료한 문장</p>
+      <p style="font-size:11px;color:var(--t4)">2개 완료</p>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" style="display:flex;border-top:1px solid var(--line);padding:10px 0 30px">
+    <div onclick="goTo('home')" data-nav="home" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-4 0v-6a1 1 0 011-1h2a1 1 0 011 1v6"/></svg>
+      <span style="font-size:10px;color:var(--t4)">홈</span>
+    </div>
+    <div onclick="goTo('map')" data-nav="map" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span style="font-size:10px;color:var(--t4)">구조 지도</span>
+    </div>
+    <div onclick="goTo('log')" data-nav="log" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--t4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span style="font-size:10px;color:var(--t4)">내 기록</span>
+    </div>
+    <div onclick="goTo('review')" data-nav="review" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer">
+      <svg width="22" height="22" fill="none" stroke="var(--a)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span style="font-size:10px;color:var(--a);font-weight:600">복습</span>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const BL={b1:"That's a great idea",b2:"I'm a bit concerned",b3:"we might not have enough resources"};
+let sel=[],conn=null;
+
+function goTo(id){
+  document.querySelectorAll('.s').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+id).classList.add('on');
+  window.scrollTo(0,0);
+  // Update nav
+  const tabs = ['home','map','log','review'];
+  if(tabs.includes(id)){
+    document.querySelectorAll('[data-nav]').forEach(n=>{
+      const active = n.dataset.nav === id;
+      n.querySelector('svg').style.stroke = active ? 'var(--a)' : 'var(--t4)';
+      n.querySelector('span').style.color = active ? 'var(--a)' : 'var(--t4)';
+      n.querySelector('span').style.fontWeight = active ? '600' : '400';
+    });
+  }
+}
+
+function goTypeDetail(typeNum){
+  goTo('type-detail');
+}
+
+// Home
+const inp=document.getElementById('home-input'),btnGo=document.getElementById('btn-go'),wrap=document.getElementById('home-input-wrap');
+inp.addEventListener('input',()=>{const h=inp.value.trim();btnGo.className=h?'':'btn-disabled';if(h){btnGo.style.background='var(--a)';btnGo.style.color='#fff';btnGo.style.cursor='pointer';btnGo.style.boxShadow='0 4px 16px rgba(139,139,245,.2)'}else{btnGo.style.background='var(--c2)';btnGo.style.color='var(--t4)';btnGo.style.cursor='default';btnGo.style.boxShadow='none'}});
+inp.addEventListener('focus',()=>{wrap.style.border='1.5px solid rgba(139,139,245,.15)';wrap.style.boxShadow='0 0 0 4px rgba(139,139,245,.03)'});
+inp.addEventListener('blur',()=>{wrap.style.border='1.5px solid transparent';wrap.style.boxShadow='none'});
+
+function pickEx(el){inp.value=el.querySelector('p').textContent;inp.dispatchEvent(new Event('input'));el.style.border='1px solid var(--a)';el.style.background='rgba(139,139,245,.04)';setTimeout(()=>startFlow(),300)}
+
+function pickExToday(el){
+  const text="사실 처음엔 반대였는데, 해보니까 생각이 바뀌었어";
+  inp.value=text;
+  inp.dispatchEvent(new Event('input'));
+  el.style.border='1px solid var(--a)';
+  el.style.background='rgba(139,139,245,.04)';
+  setTimeout(()=>startFlow(),300);
+}
+
+let preAnswer=null,afterAnswer=null,flowCount=0;
+
+function startFlow(){
+  if(!inp.value.trim())return;
+  flowCount++;
+  document.getElementById('emp-echo').textContent='"'+inp.value.trim()+'"';
+  const w=document.getElementById('emp-wave');
+  if(flowCount<=1){
+    // 첫 회: 풀 공감 애니메이션 2.2초
+    w.style.animation='wave .9s ease-out forwards';
+    goTo('empathy');
+    setTimeout(()=>{w.style.animation='';goTo('precheck')},2200);
+  }else{
+    // 2회차 이후: 축소 — 0.6초 확인만
+    document.querySelector('#s-empathy .fu').style.fontSize='26px';
+    document.querySelector('#s-empathy [style*="26px"]').textContent='알겠어, 같이 보자';
+    w.style.animation='wave .5s ease-out forwards';
+    goTo('empathy');
+    setTimeout(()=>{w.style.animation='';goTo('precheck')},700);
+  }
+}
+
+function pickPrecheck(ans){
+  preAnswer=ans;
+  const ko=document.getElementById('pre-ko'),en=document.getElementById('pre-en');
+  if(ans==='ko'){
+    ko.style.background='rgba(139,139,245,.04)';ko.style.border='1.5px solid rgba(139,139,245,.15)';ko.style.color='var(--a)';
+    en.style.background='var(--c)';en.style.border='1.5px solid var(--line)';en.style.color='var(--t2)';
+  }else{
+    en.style.background='rgba(139,139,245,.04)';en.style.border='1.5px solid rgba(139,139,245,.15)';en.style.color='var(--a)';
+    ko.style.background='var(--c)';ko.style.border='1.5px solid var(--line)';ko.style.color='var(--t2)';
+  }
+  // Show before label in step3
+  document.getElementById('s3-before-label').textContent=ans==='ko'?'인정부터 — 한국어 순서':'걱정부터 — 영어 순서';
+  setTimeout(()=>goTo('step0'),500);
+}
+
+function pickAfter(ans){
+  afterAnswer=ans;
+  const ko=document.getElementById('after-ko'),en=document.getElementById('after-en');
+  if(ans==='ko'){
+    ko.style.background='rgba(139,139,245,.04)';ko.style.border='1.5px solid rgba(139,139,245,.15)';ko.style.color='var(--a)';
+    en.style.background='var(--c)';en.style.border='1.5px solid var(--line)';en.style.color='var(--t2)';
+  }else{
+    en.style.background='rgba(139,139,245,.04)';en.style.border='1.5px solid rgba(139,139,245,.15)';en.style.color='var(--a)';
+    ko.style.background='var(--c)';ko.style.border='1.5px solid var(--line)';ko.style.color='var(--t2)';
+  }
+  // Show verdict
+  const v=document.getElementById('s3-verdict');v.style.display='block';
+  const shifted=preAnswer==='ko'&&afterAnswer==='en';
+  const alreadyEn=preAnswer==='en'&&afterAnswer==='en';
+  const noChange=preAnswer===afterAnswer&&preAnswer==='ko';
+  if(shifted){
+    v.innerHTML='<div class="fi" style="background:rgba(94,196,146,.03);border:1px solid rgba(94,196,146,.06);border-radius:12px;padding:14px;margin-top:4px"><div style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="var(--ok)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><p style="font-size:13px;color:var(--ok);font-weight:600">사고가 바뀌었어!</p></div><p style="font-size:12px;color:var(--t3);margin-top:6px;line-height:1.5">처음엔 한국어 순서였는데, 연습 후 영어 순서로 전환됐어.</p></div>';
+  }else if(alreadyEn){
+    v.innerHTML='<div class="fi" style="background:rgba(94,196,146,.03);border:1px solid rgba(94,196,146,.06);border-radius:12px;padding:14px;margin-top:4px"><div style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="var(--ok)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><p style="font-size:13px;color:var(--ok);font-weight:600">처음부터 영어 순서였어</p></div><p style="font-size:12px;color:var(--t3);margin-top:6px;line-height:1.5">이 유형은 이미 체득하고 있어. 다른 유형도 도전해봐.</p></div>';
+  }else{
+    v.innerHTML='<div class="fi" style="background:var(--c);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:4px"><p style="font-size:13px;color:var(--t3);line-height:1.5">아직 한국어 순서가 먼저 떠오르지. <span style="color:var(--t2);font-weight:600">반복하면 바뀌어.</span></p></div>';
+  }
+  const b=document.getElementById('btn-s3');b.className='btn btn-primary';b.style.background='var(--a)';b.style.color='#fff';b.style.cursor='pointer';
+}
+
+// Level 2 — 유형 직접 선택
+function pickType(el,ans){
+  const fb=document.getElementById('lv2-type-fb');
+  el.parentElement.querySelectorAll('button').forEach(b=>{b.style.pointerEvents='none';b.style.opacity='.4'});
+  el.style.opacity='1';
+  if(ans==='correct'){
+    el.style.background='rgba(94,196,146,.06)';el.style.border='1.5px solid rgba(94,196,146,.15)';
+    fb.style.display='block';
+    fb.innerHTML='<div style="padding:12px 14px;border-radius:10px;background:rgba(94,196,146,.04);border:1px solid rgba(94,196,146,.08)"><p style="font-size:13px;color:var(--ok);line-height:1.6;font-weight:500">맞아! "인정하고 나서 꺾는" 전형적인 양보+주장 구조야.</p></div>';
+  }else{
+    el.style.background='rgba(212,151,90,.06)';el.style.border='1.5px solid rgba(212,151,90,.15)';
+    fb.style.display='block';
+    fb.innerHTML='<div style="padding:12px 14px;border-radius:10px;background:rgba(212,151,90,.04);border:1px solid rgba(212,151,90,.08)"><p style="font-size:13px;color:var(--w);line-height:1.6;font-weight:500">"좋은 아이디어인 건 맞는데" — 먼저 인정하고 꺾는 구조니까 양보+주장(유형 1)이 맞아.</p></div>';
+  }
+}
+
+// Step 0 quiz — 전환점 찾기
+function pickPivot(ans){
+  const a=document.getElementById('pv-a'),b=document.getElementById('pv-b'),fb=document.getElementById('s0-quiz-fb');
+  if(ans==='correct'){
+    a.style.background='rgba(94,196,146,.06)';a.style.border='1.5px solid rgba(94,196,146,.15)';a.style.color='var(--ok)';
+    b.style.opacity='.4';b.style.pointerEvents='none';
+    fb.style.display='block';
+    fb.innerHTML='<p style="font-size:12px;color:var(--ok);line-height:1.6;font-weight:500">"맞는데"가 전환점이야. 앞의 인정을 뒤의 걱정으로 꺾어주는 역할을 해.</p>';
+  }else{
+    b.style.background='rgba(212,151,90,.06)';b.style.border='1.5px solid rgba(212,151,90,.15)';b.style.color='var(--w)';
+    a.style.opacity='.4';a.style.pointerEvents='none';
+    fb.style.display='block';
+    fb.style.background='rgba(212,151,90,.04)';fb.style.borderColor='rgba(212,151,90,.08)';
+    fb.innerHTML='<p style="font-size:12px;color:var(--w);line-height:1.6;font-weight:500">"부족하지 않을까"는 걱정의 내용이야. 전환점은 "맞는데" — 인정에서 걱정으로 꺾어주는 지점이지.</p>';
+  }
+  // 블록 영역 공개
+  setTimeout(()=>{
+    const wrap=document.getElementById('s0-blocks-wrap');
+    wrap.style.display='block';wrap.style.animation='fu .4s ease both';
+  },800);
+}
+
+// Review unlock
+function unlockToday(){
+  document.getElementById('review-nudge').style.display='none';
+  const card=document.getElementById('today-card');
+  card.style.borderLeft='3px solid var(--a)';
+  document.getElementById('today-lock').style.opacity='0';
+  document.getElementById('today-lock').style.pointerEvents='none';
+}
+
+// Blocks
+function tapBlock(id){
+  const el=document.getElementById('bl-'+id);
+  if(sel.includes(id)){
+    sel=sel.filter(x=>x!==id);
+    el.style.background='var(--c)';el.style.border='1.5px solid transparent';
+    el.querySelector('.bl-en').style.color='var(--t2)';
+    el.querySelector('.bl-num').style.background='var(--c2)';
+    el.querySelector('.bl-num').style.color='var(--t4)';
+    el.querySelector('.bl-num').textContent='';
+    sel.forEach((s,i)=>{const e=document.getElementById('bl-'+s);e.querySelector('.bl-num').textContent=i+1});
+  }else{
+    sel.push(id);
+    el.style.animation='pop .3s ease';setTimeout(()=>el.style.animation='',300);
+    el.style.background='rgba(139,139,245,.04)';el.style.border='1.5px solid rgba(139,139,245,.1)';
+    el.querySelector('.bl-en').style.color='var(--t1)';
+    const num=el.querySelector('.bl-num');
+    num.style.background='var(--a)';num.style.color='#fff';
+    num.textContent=sel.length;
+    num.style.animation='numIn .25s ease';setTimeout(()=>num.style.animation='',250);
+  }
+  updPv();
+  if(sel.length===3)setTimeout(()=>{document.getElementById('ph-blocks').style.display='none';document.getElementById('ph-conn').style.display='block'},400);
+}
+
+function updPv(){
+  const t=document.getElementById('pv-text'),c=document.getElementById('pv-count');
+  c.textContent=sel.length+'/3'+(conn?' + '+conn:'');
+  if(!sel.length){t.textContent='블록을 눌러서 문장을 만들어봐';t.style.color='var(--t4)';return}
+  const parts=sel.map(i=>BL[i]);
+  let txt;
+  if(conn&&sel.length>=2)txt=parts[0]+', '+conn+' '+parts.slice(1).join(' ')+'.';
+  else txt=parts.join(' … ')+(sel.length===3?'':' …');
+  t.style.color='var(--t1)';t.textContent=txt;
+  const pv=document.getElementById('pv');
+  if(sel.length===3&&conn){pv.style.borderColor='rgba(139,139,245,.2)';pv.style.transform='scale(1.01)';setTimeout(()=>pv.style.transform='',300)}else{pv.style.borderColor='var(--line)'}
+  updGo2();
+}
+
+function tapConn(c){
+  conn=c;
+  document.querySelectorAll('.cn').forEach(el=>{
+    const is=el.dataset.c===c;
+    el.style.background=is?'rgba(139,139,245,.04)':'var(--c)';
+    el.style.border=is?'1.5px solid rgba(139,139,245,.1)':'1.5px solid transparent';
+    el.querySelector('.cn-label').style.color=is?'var(--a)':'var(--t2)';
+    el.querySelector('.cn-detail').style.maxHeight=is?'80px':'0';
+  });
+  updPv();
+}
+
+function updGo2(){
+  const b=document.getElementById('btn-go2'),ok=sel.length===3&&conn;
+  b.className=ok?'':'btn-disabled';
+  b.style.background=ok?'var(--a)':'var(--c2)';b.style.color=ok?'#fff':'var(--t4)';
+  b.style.cursor=ok?'pointer':'default';b.style.boxShadow=ok?'0 4px 20px rgba(139,139,245,.2)':'none';
+}
+
+function goStep2(){
+  if(sel.length!==3||!conn)return;
+  const key=sel.join(','),orderOk=key==='b1,b2,b3'||key==='b2,b3,b1',connOk=conn==='but',ok=orderOk&&connOk;
+  const parts=sel.map(i=>BL[i]),sentence=parts[0]+', '+conn+' '+parts.slice(1).join(' ')+'.';
+  const col=ok?'var(--ok)':'var(--w)';
+  document.getElementById('fb2-title').textContent=ok?'맞았어':'거의 다 왔어';
+  document.getElementById('fb2-title').style.color=col;
+  document.getElementById('fb2-sentence').textContent=sentence;
+  document.getElementById('fb2-sub').textContent=ok?'어순이랑 연결어 둘 다 잘 잡았어':(!orderOk?'걱정되는 거를 먼저 꺼내봐. 인정은 뒤에.':'연결어를 다시 골라봐. 이 상황에선 더 직접적인 게 나아.');
+  if(ok){
+    document.getElementById('fb2-box').style.background='rgba(94,196,146,.03)';document.getElementById('fb2-box').style.border='1px solid rgba(94,196,146,.06)';
+    document.getElementById('fb2-explain').innerHTML='상대 의견을 먼저 인정하고 <span style="font-family:var(--en);font-weight:600;color:var(--t2)">"but"</span>으로 우려를 연결하면 공격적이지 않으면서 명확하게 전달돼. <span style="font-weight:600;color:var(--t2)">회의에서 아주 자주 쓰이는 순서야.</span>';
+    document.getElementById('fb2-btn').textContent='이 패턴 내 걸로 만들기';document.getElementById('fb2-btn').style.background='var(--ok)';document.getElementById('fb2-btn').style.boxShadow='0 4px 20px rgba(94,196,146,.2)';
+    document.getElementById('fb2-btn').onclick=()=>goTo('step3');
+  }else{
+    document.getElementById('fb2-box').style.background='var(--c)';document.getElementById('fb2-box').style.border='1px solid var(--line)';
+    document.getElementById('fb2-explain').innerHTML=!orderOk?'영어에서는 <span style="font-weight:600;color:var(--t2)">하고 싶은 말을 먼저 꺼내.</span> 돌려 말하는 건 그다음이야.':'이 맥락에서는 <span style="font-family:var(--en);font-weight:600;color:var(--t2)">"but"</span>이 가장 자연스러워. 간결하고 직접적이거든.';
+    document.getElementById('fb2-btn').textContent='다시 해볼게';document.getElementById('fb2-btn').style.background='var(--a)';document.getElementById('fb2-btn').style.boxShadow='0 4px 20px rgba(139,139,245,.2)';
+    document.getElementById('fb2-btn').onclick=()=>{resetAll();goTo('step1')};
+  }
+  goTo('step2');
+  setTimeout(()=>{const l=document.getElementById('side-line');l.style.background=col;l.style.height=ok?'240px':'100px'},200);
+}
+
+// pickThink removed — replaced by pickPrecheck + pickAfter
+
+function resetAll(){
+  sel=[];conn=null;
+  ['b1','b2','b3'].forEach(id=>{const e=document.getElementById('bl-'+id);e.style.background='var(--c)';e.style.border='1.5px solid transparent';e.querySelector('.bl-en').style.color='var(--t2)';const n=e.querySelector('.bl-num');n.style.background='var(--c2)';n.style.color='var(--t4)';n.textContent=''});
+  document.getElementById('ph-blocks').style.display='block';document.getElementById('ph-conn').style.display='none';
+  document.querySelectorAll('.cn').forEach(el=>{el.style.background='var(--c)';el.style.border='1.5px solid transparent';el.querySelector('.cn-label').style.color='var(--t2)';el.querySelector('.cn-detail').style.maxHeight='0'});
+  updPv();updGo2();
+  document.getElementById('side-line').style.height='0';
+}
+
+function fullReset(){
+  resetAll();inp.value='';inp.dispatchEvent(new Event('input'));
+  preAnswer=null;afterAnswer=null;
+  // Reset Step 0 quiz
+  const qa=document.getElementById('pv-a'),qb=document.getElementById('pv-b'),qfb=document.getElementById('s0-quiz-fb'),bw=document.getElementById('s0-blocks-wrap');
+  if(qa){qa.style.background='var(--c)';qa.style.border='1.5px solid var(--line)';qa.style.color='var(--t2)';qa.style.opacity='1';qa.style.pointerEvents='auto'}
+  if(qb){qb.style.background='var(--c)';qb.style.border='1.5px solid var(--line)';qb.style.color='var(--t2)';qb.style.opacity='1';qb.style.pointerEvents='auto'}
+  if(qfb)qfb.style.display='none';
+  if(bw)bw.style.display='none';
+  // Reset precheck buttons
+  ['pre-ko','pre-en'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.background='var(--c)';e.style.border='1.5px solid var(--line)';e.style.color='var(--t2)'}});
+  // Reset after buttons
+  ['after-ko','after-en'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.background='var(--c)';e.style.border='1.5px solid var(--line)';e.style.color='var(--t2)'}});
+  // Reset verdict
+  const v=document.getElementById('s3-verdict');if(v)v.style.display='none';
+  const b=document.getElementById('btn-s3');b.className='btn btn-disabled';b.style.background='var(--c2)';b.style.color='var(--t4)';b.style.cursor='default';
+  document.querySelectorAll('.ex').forEach(e=>{e.style.border='1px solid transparent';e.style.background='var(--c)'});
+}
+</script>
+</body>
+</html>
