@@ -15,13 +15,18 @@ export default function Learn() {
   const isCustom = id === 'custom' || !id
 
   useEffect(() => {
+    // Only bootstrap the session when we're at the initial step.
+    // Without this guard, any later currentStep change would re-trigger
+    // startScenario/startCustom and wipe the in-progress session state.
+    if (currentStep !== 'input') return
+
     if (!isCustom && id) {
       db.getScenario(id).then((scenario) => {
         if (scenario) startScenario(scenario)
         else navigate('/')
       })
     }
-    if (isCustom && passedInput.trim() && currentStep === 'input') {
+    if (isCustom && passedInput.trim()) {
       startCustom(passedInput)
     }
   }, [id, isCustom, startScenario, startCustom, navigate, passedInput, currentStep])

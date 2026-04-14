@@ -1,13 +1,17 @@
 import type { ChatStep, StepResponseMap } from '../types'
 import { SYSTEM_PROMPTS, buildUserMessage } from './prompts'
+import { callClaudeMock } from './mocks'
 
 const API_URL = '/api/chat'
 const MAX_RETRIES = 1
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 export async function callClaude<T extends ChatStep>(
   step: T,
   data: Record<string, unknown>,
 ): Promise<StepResponseMap[T]> {
+  if (USE_MOCK) return callClaudeMock(step)
+
   const systemPrompt = SYSTEM_PROMPTS[step]
   const userMessage = buildUserMessage(step, data)
 
