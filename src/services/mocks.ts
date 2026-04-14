@@ -4,7 +4,8 @@ import type { SessionPayload } from '../types/v8'
  * Static fixture for design-review / offline iteration.
  * Toggled via VITE_USE_MOCK=true in .env.local — bypasses /api/chat entirely.
  */
-export function mockSessionPayload(_korean: string): Promise<SessionPayload> {
+export function mockSessionPayload(korean: string): Promise<SessionPayload> {
+  void korean
   return new Promise((resolve) => setTimeout(() => resolve(FIXTURE), 600))
 }
 
