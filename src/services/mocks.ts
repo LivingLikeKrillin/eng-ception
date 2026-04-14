@@ -1,69 +1,89 @@
-import type { ChatStep, StepResponseMap } from '../types'
+import type { SessionPayload } from '../types/v8'
 
 /**
- * Static fixtures for design-review / offline iteration.
+ * Static fixture for design-review / offline iteration.
  * Toggled via VITE_USE_MOCK=true in .env.local — bypasses /api/chat entirely.
- * Content is intentionally rich and realistic so every UI surface (pull-quote
- * lead, list rows, ladder variants, pattern cards) has representative data.
  */
-
-const mockRestructure: StepResponseMap['restructure'] = {
-  whyHard:
-    "이 문장은 '부정' → '한정' → '감정 전달'이라는 세 층이 한 번에 쌓여 있어요. 한국어는 '~는 건 아닌데'로 앞부분을 완곡하게 닫고 바로 감정을 내놓지만, 영어는 이런 중첩을 한 문장에 담기보다 두 문장으로 분리하는 편이 훨씬 자연스럽습니다.",
-  restructured: [
-    '네가 틀렸다는 뜻은 아니야.',
-    '그냥 그 말이 나한테는 조금 아프게 들렸어.',
-  ],
-  feedback:
-    '사용자가 쓴 재구성은 방향이 맞아요. "틀렸다는 말이 아니다"를 먼저 분리해낸 판단이 좋았고, 뒤에 감정만 담는 구조도 영어로 옮기기 쉬운 형태입니다.',
-  hints: [
-    "첫 문장은 'I\\'m not saying...'로 시작하는 게 가장 안전해요.",
-    '두 번째 문장은 감정을 주어가 아닌 상황 탓으로 돌리는 게 덜 공격적입니다.',
-  ],
+export function mockSessionPayload(korean: string): Promise<SessionPayload> {
+  void korean
+  return new Promise((resolve) => setTimeout(() => resolve(FIXTURE), 600))
 }
 
-const mockEnglish: StepResponseMap['english'] = {
-  english: {
-    safe: "I'm not saying you're wrong. But that hurt a little.",
-    natural:
-      "I'm not trying to say you're wrong — I just felt a bit hurt by what you said.",
-    refined:
-      "I don't mean to say you're wrong. It's just that what you said stung a little.",
+const FIXTURE: SessionPayload = {
+  structureType: {
+    id: 'concession-claim',
+    label: '양보 + 주장',
+    category: '업무/논리',
   },
-  feedback:
-    "세 단계 모두 '공격하지 않으면서 감정을 전달한다'는 원래 의도를 지키고 있어요. Safe는 말문이 막혔을 때 바로 꺼낼 수 있는 최소 단위, Natural은 실제 대화에서 가장 자주 쓰이는 형태, Refined는 글로 쓸 때 더 어른스러운 톤이 납니다.",
-}
-
-const mockPattern: StepResponseMap['pattern'] = {
-  patterns: [
-    {
-      template: "I'm not saying A. I just felt B.",
-      category: '감정/관계',
-      tags: ['완곡', '감정 전달'],
-      exampleOriginal: '네가 틀렸다고 말하려는 건 아닌데, 그 말은 좀 서운했어.',
-      exampleEnglish:
-        "I'm not saying you're wrong. I just felt a little hurt by that.",
+  empathy: {
+    echo: '좋은 아이디어인 건 맞는데, 리소스가 부족...',
+    message: '아, 이거 진짜 답답하지',
+  },
+  precheck: {
+    question: '이걸 영어로 말한다면 뭐부터 꺼낼 것 같아?',
+    choices: [
+      { id: 'first', label: '인정부터', preview: '좋은 아이디어인 건 맞는데…' },
+      { id: 'second', label: '걱정부터', preview: '리소스가 부족하지 않을까…' },
+    ],
+    correctChoiceId: 'first',
+  },
+  structure: {
+    parts: [
+      { text: '좋은 아이디어인 건 맞는데, ', role: 'first' },
+      { text: '현실적으로 ', role: 'neutral' },
+      { text: '리소스가 부족하지 않을까요?', role: 'second' },
+    ],
+    coreStructure: ['인정', '전환', '걱정'],
+    explanation:
+      "앞에서 '좋은 아이디어'라고 인정하고 나서, 뒤에서 '리소스가 부족하지 않을까'라고 걱정을 꺼내고 있어.",
+    pivotQuiz: {
+      question: '이 문장의 전환점은?',
+      options: [
+        { id: 'a', text: '맞는데', hint: "'좋긴 한데…' 하고 꺾는 지점", isCorrect: true },
+        { id: 'b', text: '부족하지 않을까', hint: '걱정을 꺼내는 지점', isCorrect: false },
+      ],
+      feedback:
+        "'맞는데'가 전환점이야. 앞의 인정을 뒤의 걱정으로 꺾어주는 역할을 해.",
     },
-    {
-      template: "I don't mean to A. It's just that B.",
-      category: '감정/관계',
-      tags: ['해명', '부드러운 반박'],
-      exampleOriginal: '반대하려는 건 아니고, 지금은 좀 부담스러워서 그래.',
-      exampleEnglish:
-        "I don't mean to push back. It's just that I'm feeling a bit overwhelmed right now.",
+  },
+  assembly: {
+    blocks: [
+      { id: 'b1', en: "That's a great idea", order: 1 },
+      { id: 'b2', en: "I'm a bit concerned", order: 2 },
+      { id: 'b3', en: 'we might not have enough resources', order: 3 },
+    ],
+    connectors: [
+      { id: 'but', label: 'but', meaning: '강하고 직접적인 반대', isCorrect: true },
+      { id: 'although', label: 'although', meaning: '살짝 부드러운 반대', isCorrect: false },
+      { id: 'though', label: 'though', meaning: '문장 끝에 덧붙이는 식', isCorrect: false },
+    ],
+    finalSentence:
+      "That's a great idea, but I'm a bit concerned we might not have enough resources.",
+  },
+  feedback: {
+    correctTitle: '맞았어',
+    correctSub: '어순이랑 연결어 둘 다 잘 잡았어',
+    wrongTitle: '아쉬워',
+    wrongSub: '여기는 이렇게 가는 게 맞아',
+    explanation:
+      '상대 의견을 먼저 인정하고 "but"으로 우려를 연결하면 공격적이지 않으면서 명확하게 전달돼. 회의에서 자주 쓰이는 순서야.',
+    wordOrder: {
+      korean: [
+        { label: '인정', role: 'first' },
+        { label: '걱정', role: 'second' },
+      ],
+      english: [
+        { label: '인정', role: 'first' },
+        { label: 'but', role: 'pivot', connectorLabel: 'but' },
+        { label: '걱정', role: 'second' },
+      ],
+      reversed: false,
+      keyInsight:
+        '영어는 하고 싶은 말을 먼저 꺼내. 이 문장에서는 인정이 먼저, 걱정이 뒤 — 한국어와 같은 순서야. 다만 "but"이 전환점을 명확하게 찍어줘.',
     },
-  ],
-}
-
-const FIXTURES: StepResponseMap = {
-  restructure: mockRestructure,
-  english: mockEnglish,
-  pattern: mockPattern,
-}
-
-export async function callClaudeMock<T extends ChatStep>(
-  step: T,
-): Promise<StepResponseMap[T]> {
-  await new Promise((r) => setTimeout(r, 600))
-  return FIXTURES[step] as StepResponseMap[T]
+  },
+  pattern: {
+    template: "That's a great idea, but I'm a bit concerned ~",
+    tags: ['회의 반대', '제안 거절', '피드백'],
+  },
 }

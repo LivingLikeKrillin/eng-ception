@@ -25,7 +25,7 @@ export default async function handler(req: Request) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -46,7 +46,7 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify(parsed), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (error) {
+  } catch {
     return new Response(
       JSON.stringify({ error: 'Failed to process request' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
