@@ -11,6 +11,7 @@
     "dev:api": "node dev-server.js"
   },
   "dependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.0",
     "express": "^5.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
