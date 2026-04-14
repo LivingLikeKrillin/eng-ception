@@ -1,41 +1,49 @@
-import type { ChatStep, StepResponseMap } from '../types'
-import { SYSTEM_PROMPTS, buildUserMessage } from './prompts'
-import { callClaudeMock } from './mocks'
+import type { SessionPayload } from '../types/v8'
+import { SYSTEM_PROMPT, buildUserMessage } from './prompts'
+import { assertSessionPayload } from './validate'
+import { mockSessionPayload } from './mocks'
 
 const API_URL = '/api/chat'
-const MAX_RETRIES = 1
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+const MAX_RETRIES = 1
+const FETCH_TIMEOUT_MS = 4_000
 
-export async function callClaude<T extends ChatStep>(
-  step: T,
-  data: Record<string, unknown>,
-): Promise<StepResponseMap[T]> {
-  if (USE_MOCK) return callClaudeMock(step)
-
-  const systemPrompt = SYSTEM_PROMPTS[step]
-  const userMessage = buildUserMessage(step, data)
+export async function fetchSessionPayload(korean: string): Promise<SessionPayload> {
+  if (USE_MOCK) return mockSessionPayload(korean)
 
   let lastError: Error | null = null
-
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step, systemPrompt, userMessage }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      const json = await response.json()
-      return json as StepResponseMap[T]
-    } catch (error) {
-      lastError = error as Error
+      return await fetchOnce(korean)
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e))
       if (attempt < MAX_RETRIES) continue
     }
   }
+  throw lastError ?? new Error('unknown')
+}
 
-  throw lastError ?? new Error('Unknown error')
+async function fetchOnce(korean: string): Promise<SessionPayload> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemPrompt: SYSTEM_PROMPT,
+        userMessage: buildUserMessage(korean),
+      }),
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`API error: ${res.status}`)
+    const json = await res.json()
+    assertSessionPayload(json)
+    return json
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw new Error('timeout')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
 }
