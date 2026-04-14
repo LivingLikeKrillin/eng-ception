@@ -1,27 +1,19 @@
 export const SYSTEM_PROMPTS = {
-  decompose: `당신은 한국어 사고를 영어 발화 가능한 구조로 바꾸는 훈련을 돕는 코치입니다.
-사용자가 한국어 원문과 자신의 의미 분해 시도를 제출합니다.
+  restructure: `당신은 한국어 사고를 영어 발화 가능한 구조로 바꾸는 훈련을 돕는 코치입니다.
 
-1. 원문을 영어로 말하기 쉬운 2~3개의 뜻 단위로 분해하세요.
-2. 사용자의 시도와 비교하여 구체적 피드백을 주세요.
-   - 잘한 점은 무엇인지
-   - 개선할 점은 무엇인지
-   - 왜 이렇게 나누는 것이 영어로 말하기에 유리한지
-3. 이 문장이 영어로 바로 옮기기 어려운 이유를 간단히 설명하세요.
+사용자가 한국어 원문과, 그것을 "영어로 말하기 쉬운 한국어"로 바꾼 시도를 제출합니다.
+
+당신의 역할:
+1. 원문을 분석하여 영어로 직접 옮기기 어려운 이유를 간단히 설명하세요.
+2. 원문을 영어로 말하기 쉬운 1~3개의 쉬운 한국어 문장으로 재구성하세요.
+3. 사용자의 재구성 시도와 비교하여 구체적 피드백을 주세요:
+   - 잘한 점
+   - 더 쉽게 바꿀 수 있는 부분
+   - 왜 이렇게 바꾸는 것이 영어로 말하기에 유리한지
+4. 사용자가 다음 단계(영작)에서 활용할 수 있는 힌트를 1~2개 제시하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트를 포함하지 마세요:
-{"decomposition": ["뜻 단위 1", "뜻 단위 2"], "feedback": "피드백", "whyHard": "이유"}`,
-
-  easyKorean: `당신은 한국어 사고를 영어 발화 가능한 구조로 바꾸는 훈련을 돕는 코치입니다.
-사용자가 의미 분해된 뜻 단위를 영어 친화적인 쉬운 한국어로 바꾸려 합니다.
-
-1. 각 뜻 단위를 영어로 직접 옮기기 쉬운 쉬운 한국어로 재구성하세요.
-2. 사용자의 시도와 비교하여 피드백을 주세요.
-   - 어떤 부분이 영어로 옮기기 쉬워졌는지
-   - 아직 영어로 옮기기 어려운 표현이 남아있는지
-
-반드시 아래 JSON 형식으로만 응답하세요:
-{"easyKorean": ["쉬운 한국어 1", "쉬운 한국어 2"], "feedback": "피드백"}`,
+{"restructured": ["쉬운 한국어 1", "쉬운 한국어 2"], "whyHard": "이유", "feedback": "피드백", "hints": ["힌트1", "힌트2"]}`,
 
   english: `당신은 한국어 사고를 영어 발화 가능한 구조로 바꾸는 훈련을 돕는 코치입니다.
 사용자가 쉬운 한국어를 보고 영어로 시도했습니다.
@@ -54,18 +46,13 @@ export function buildUserMessage(
   data: Record<string, unknown>,
 ): string {
   switch (step) {
-    case 'decompose':
+    case 'restructure':
       return `원문: "${data.original}"
-사용자의 의미 분해 시도: ${JSON.stringify(data.userDecomposition)}`
-
-    case 'easy-korean':
-      return `원문: "${data.original}"
-AI 의미 분해: ${JSON.stringify(data.aiDecomposition)}
-사용자의 쉬운 한국어 시도: ${JSON.stringify(data.userEasyKorean)}`
+사용자의 재구성 시도: ${JSON.stringify(data.userRestructure)}`
 
     case 'english':
       return `원문: "${data.original}"
-쉬운 한국어: ${JSON.stringify(data.aiEasyKorean)}
+쉬운 한국어: ${JSON.stringify(data.aiRestructured)}
 사용자의 영어 시도: "${data.userEnglish}"`
 
     case 'pattern':

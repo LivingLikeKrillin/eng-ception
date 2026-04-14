@@ -2,8 +2,7 @@ import { create } from 'zustand'
 import type {
   LearningStep,
   Scenario,
-  DecomposeResponse,
-  EasyKoreanResponse,
+  RestructureResponse,
   EnglishResponse,
   PatternResponse,
   LearningRecord,
@@ -13,43 +12,44 @@ import { localStorageAdapter as db } from './localStorage'
 import { callClaude } from '../services/claude'
 
 interface LearningState {
+  // 세션 상태
   currentStep: LearningStep
   scenario: Scenario | null
   originalKorean: string
   isCustomInput: boolean
   isLoading: boolean
   error: string | null
-  userDecomposition: string[]
-  userEasyKorean: string[]
+
+  // 사용자 입력
+  userRestructure: string[]
   userEnglish: string
-  aiDecompose: DecomposeResponse | null
-  aiEasyKorean: EasyKoreanResponse | null
+
+  // AI 응답
+  aiRestructure: RestructureResponse | null
   aiEnglish: EnglishResponse | null
   aiPattern: PatternResponse | null
+
+  // 액션
   startScenario: (scenario: Scenario) => void
   startCustom: (korean: string) => void
-  submitDecomposition: (parts: string[]) => Promise<void>
-  submitEasyKorean: (parts: string[]) => Promise<void>
+  submitRestructure: (parts: string[]) => Promise<void>
   submitEnglish: (text: string) => Promise<void>
   extractPatterns: () => Promise<void>
   savePattern: (index: number) => Promise<void>
   saveRecord: () => Promise<void>
   reset: () => void
-  goToNextStep: () => void
 }
 
 const initialState = {
-  currentStep: 'original' as LearningStep,
+  currentStep: 'input' as LearningStep,
   scenario: null as Scenario | null,
   originalKorean: '',
   isCustomInput: false,
   isLoading: false,
   error: null as string | null,
-  userDecomposition: [] as string[],
-  userEasyKorean: [] as string[],
+  userRestructure: [] as string[],
   userEnglish: '',
-  aiDecompose: null as DecomposeResponse | null,
-  aiEasyKorean: null as EasyKoreanResponse | null,
+  aiRestructure: null as RestructureResponse | null,
   aiEnglish: null as EnglishResponse | null,
   aiPattern: null as PatternResponse | null,
 }
@@ -62,7 +62,7 @@ export const useLearningStore = create<LearningState>((set, get) => ({
       ...initialState,
       scenario,
       originalKorean: scenario.originalKorean,
-      currentStep: 'decompose',
+      currentStep: 'restructure',
     })
   },
 
@@ -71,32 +71,23 @@ export const useLearningStore = create<LearningState>((set, get) => ({
       ...initialState,
       isCustomInput: true,
       originalKorean: korean,
-      currentStep: 'decompose',
+      currentStep: 'restructure',
     })
   },
 
-  async submitDecomposition(parts) {
-    set({ userDecomposition: parts, isLoading: true, error: null })
+  async submitRestructure(parts) {
+    set({ userRestructure: parts, isLoading: true, error: null })
     try {
-      const result = await callClaude('decompose', {
+      const result = await callClaude('restructure', {
         original: get().originalKorean,
-        userDecomposition: parts,
+        userRestructure: parts,
       })
-      set({ aiDecompose: result, isLoading: false, currentStep: 'ai-decompose' })
-    } catch {
-      set({ error: '잠시 후 다시 시도해주세요.', isLoading: false })
-    }
-  },
-
-  async submitEasyKorean(parts) {
-    set({ userEasyKorean: parts, isLoading: true, error: null })
-    try {
-      const result = await callClaude('easy-korean', {
-        original: get().originalKorean,
-        aiDecomposition: get().aiDecompose!.decomposition,
-        userEasyKorean: parts,
+      set({
+        aiRestructure: result,
+        isLoading: false,
+        // 피드백을 같은 화면에서 보여준 뒤, 사용자가 "다음" 누르면 english로 전환
+        // currentStep은 아직 'restructure' — UI에서 피드백 표시 후 전환 처리
       })
-      set({ aiEasyKorean: result, isLoading: false, currentStep: 'ai-easy-korean' })
     } catch {
       set({ error: '잠시 후 다시 시도해주세요.', isLoading: false })
     }
@@ -107,10 +98,14 @@ export const useLearningStore = create<LearningState>((set, get) => ({
     try {
       const result = await callClaude('english', {
         original: get().originalKorean,
-        aiEasyKorean: get().aiEasyKorean!.easyKorean,
+        aiRestructured: get().aiRestructure!.restructured,
         userEnglish: text,
       })
-      set({ aiEnglish: result, isLoading: false, currentStep: 'ai-english' })
+      set({
+        aiEnglish: result,
+        isLoading: false,
+        // 피드백을 같은 화면에서 보여준 뒤, 사용자가 "다음" 누르면 pattern으로 전환
+      })
     } catch {
       set({ error: '잠시 후 다시 시도해주세요.', isLoading: false })
     }
@@ -152,16 +147,10 @@ export const useLearningStore = create<LearningState>((set, get) => ({
       id: crypto.randomUUID(),
       scenarioId: state.scenario?.id ?? null,
       originalKorean: state.originalKorean,
-      userDecomposition: state.userDecomposition,
-      userEasyKorean: state.userEasyKorean,
+      userRestructure: state.userRestructure,
       userEnglish: state.userEnglish,
-      aiDecomposition: state.aiDecompose?.decomposition ?? [],
-      aiEasyKorean: state.aiEasyKorean?.easyKorean ?? [],
-      aiEnglishLayers: state.aiEnglish?.english ?? { safe: '', natural: '', refined: '' },
-      decompositionFeedback: state.aiDecompose?.feedback ?? '',
-      easyKoreanFeedback: state.aiEasyKorean?.feedback ?? '',
-      englishFeedback: state.aiEnglish?.feedback ?? '',
-      whyHardToTranslate: state.aiDecompose?.whyHard ?? '',
+      aiRestructure: state.aiRestructure,
+      aiEnglish: state.aiEnglish,
       extractedPatterns: (state.aiPattern?.patterns ?? []).map((p) => ({
         id: crypto.randomUUID(),
         template: p.template,
@@ -174,25 +163,12 @@ export const useLearningStore = create<LearningState>((set, get) => ({
         lastReviewedAt: null,
       })),
       completedAt: new Date().toISOString(),
-      stepsCompleted: 8,
+      stepsCompleted: 4,
     }
     await db.saveLearningRecord(record)
   },
 
   reset() {
     set(initialState)
-  },
-
-  goToNextStep() {
-    const stepOrder: LearningStep[] = [
-      'original', 'decompose', 'ai-decompose',
-      'easy-korean', 'ai-easy-korean',
-      'english', 'ai-english', 'pattern',
-    ]
-    const current = get().currentStep
-    const idx = stepOrder.indexOf(current)
-    if (idx < stepOrder.length - 1) {
-      set({ currentStep: stepOrder[idx + 1] })
-    }
   },
 }))

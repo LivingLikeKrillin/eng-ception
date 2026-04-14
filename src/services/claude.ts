@@ -1,28 +1,14 @@
-import type {
-  ChatStep,
-  DecomposeResponse,
-  EasyKoreanResponse,
-  EnglishResponse,
-  PatternResponse,
-} from '../types'
+import type { ChatStep, StepResponseMap } from '../types'
 import { SYSTEM_PROMPTS, buildUserMessage } from './prompts'
 
 const API_URL = '/api/chat'
 const MAX_RETRIES = 1
 
-type StepResponseMap = {
-  decompose: DecomposeResponse
-  'easy-korean': EasyKoreanResponse
-  english: EnglishResponse
-  pattern: PatternResponse
-}
-
 export async function callClaude<T extends ChatStep>(
   step: T,
   data: Record<string, unknown>,
 ): Promise<StepResponseMap[T]> {
-  const promptKey = step === 'easy-korean' ? 'easyKorean' : step
-  const systemPrompt = SYSTEM_PROMPTS[promptKey as keyof typeof SYSTEM_PROMPTS]
+  const systemPrompt = SYSTEM_PROMPTS[step]
   const userMessage = buildUserMessage(step, data)
 
   let lastError: Error | null = null
