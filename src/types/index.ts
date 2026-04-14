@@ -6,6 +6,7 @@ export interface Scenario {
   emotionalTone: string
   difficulty: 'beginner' | 'intermediate' | 'advanced'
   category: string
+  tags?: string[]
   isDaily: boolean
   createdAt: string
 }

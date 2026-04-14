@@ -13,7 +13,7 @@ export default function StepIndicator({ current }: { current: LearningStep }) {
     <div className="px-6 pt-4 flex items-center gap-5">
       <button
         onClick={() => navigate('/')}
-        className="text-t4 hover:text-t2 transition"
+        className="text-t2 hover:text-t1 transition"
         aria-label="뒤로"
       >
         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
@@ -22,11 +22,11 @@ export default function StepIndicator({ current }: { current: LearningStep }) {
       </button>
       <div className="flex-1 h-[3px] bg-c2 rounded-full overflow-hidden">
         <div
-          className="h-full bg-accent rounded-full transition-[width] duration-500 ease-out"
+          className="h-full bg-accent rounded-full bar-grow shadow-[0_0_12px_rgba(139,139,245,0.5)]"
           style={{ width: `${progress}%` }}
         />
       </div>
-      <span className="text-xs font-en text-t4 tabular-nums">
+      <span className="text-xs font-en text-t3 tabular-nums">
         {idx + 1}/{total}
       </span>
     </div>

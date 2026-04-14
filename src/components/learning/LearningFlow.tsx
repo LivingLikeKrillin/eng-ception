@@ -28,7 +28,9 @@ export default function LearningFlow() {
           {error}
         </div>
       )}
-      <div className="flex-1 px-6 py-6 overflow-y-auto">{renderStep()}</div>
+      <div key={currentStep} className="flex-1 px-6 py-6 overflow-y-auto sfr">
+        {renderStep()}
+      </div>
     </div>
   )
 }

@@ -24,7 +24,7 @@ export default function Patterns() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="px-6 pt-5 pb-4">
-        <p className="text-[11px] font-semibold text-t4 mb-2 tracking-wider uppercase font-en">
+        <p className="text-[11px] font-semibold text-t3 mb-2 tracking-wider uppercase font-en">
           Library
         </p>
         <h1 className="text-[24px] font-bold tracking-tight text-t1">내 구조 패턴</h1>
@@ -51,7 +51,7 @@ export default function Patterns() {
 
       <div className="flex-1 px-6 pb-6">
         {filtered.length === 0 ? (
-          <p className="text-sm text-t4 text-center py-16">
+          <p className="text-sm text-t3 text-center py-16">
             저장된 패턴이 없어요.<br />학습을 완료하면 패턴이 쌓여요.
           </p>
         ) : (
@@ -78,18 +78,18 @@ export default function Patterns() {
                   ))}
                 </div>
                 <div className="bg-c2 rounded-[10px] p-3 space-y-1">
-                  <p className="text-xs text-t4 leading-relaxed">{p.exampleOriginal}</p>
+                  <p className="text-xs text-t2 leading-relaxed">{p.exampleOriginal}</p>
                   <p className="text-xs text-t2 font-medium font-en leading-relaxed">
                     {p.exampleEnglish}
                   </p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-t4 font-en">
+                  <span className="text-[11px] text-t3 font-en">
                     {new Date(p.savedAt).toLocaleDateString('ko-KR')}
                   </span>
                   <button
                     onClick={() => handleDelete(p.id)}
-                    className="text-[11px] text-t4 hover:text-warn transition"
+                    className="text-[11px] text-t2 hover:text-warn transition"
                   >
                     삭제
                   </button>

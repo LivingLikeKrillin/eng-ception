@@ -16,7 +16,7 @@ export default function Review() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="px-6 pt-5 pb-4">
-        <p className="text-[11px] font-semibold text-t4 mb-2 tracking-wider uppercase font-en">
+        <p className="text-[11px] font-semibold text-t3 mb-2 tracking-wider uppercase font-en">
           Review
         </p>
         <h1 className="text-[24px] font-bold tracking-tight text-t1">복습</h1>
@@ -25,7 +25,7 @@ export default function Review() {
       <div className="flex-1 px-6 pb-6 space-y-8">
         {patterns.length > 0 && (
           <section>
-            <p className="text-[11px] font-semibold text-t4 mb-3 tracking-wider uppercase font-en">
+            <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
               Saved Patterns
             </p>
             <div className="space-y-2">
@@ -37,7 +37,7 @@ export default function Review() {
                   <p className="text-sm font-semibold text-accent font-en leading-relaxed">
                     {p.template}
                   </p>
-                  <p className="text-[11px] text-t4 mt-1">{p.category}</p>
+                  <p className="text-[11px] text-t3 mt-1">{p.category}</p>
                 </div>
               ))}
             </div>
@@ -45,11 +45,11 @@ export default function Review() {
         )}
 
         <section>
-          <p className="text-[11px] font-semibold text-t4 mb-3 tracking-wider uppercase font-en">
+          <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
             Sentences
           </p>
           {records.length === 0 ? (
-            <p className="text-sm text-t4 text-center py-12">
+            <p className="text-sm text-t3 text-center py-12">
               아직 학습 기록이 없어요.
             </p>
           ) : (
@@ -61,7 +61,7 @@ export default function Review() {
                 >
                   <p className="text-sm text-t2 leading-relaxed">{r.originalKorean}</p>
                   <div className="flex justify-between items-center">
-                    <p className="text-[11px] text-t4 font-en">
+                    <p className="text-[11px] text-t3 font-en">
                       {new Date(r.completedAt).toLocaleDateString('ko-KR')}
                     </p>
                     <button

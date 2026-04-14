@@ -5,10 +5,10 @@
   --color-c: #18181C;
   --color-c2: #1E1E23;
   --color-line: #27272C;
-  --color-t1: #E8E8EC;
-  --color-t2: #A0A0A8;
-  --color-t3: #68686F;
-  --color-t4: #45454B;
+  --color-t1: #F2F2F5;
+  --color-t2: #C0C0C8;
+  --color-t3: #8A8A92;
+  --color-t4: #5E5E65;
   --color-accent: #8B8BF5;
   --color-accent-soft: rgba(139, 139, 245, 0.08);
   --color-ok: #5EC492;
@@ -26,14 +26,60 @@ html, body {
   letter-spacing: -0.2px;
 }
 
+/* Move 3 — atmospheric depth.
+   One soft radial glow in the upper-left echoing the brand's
+   purple, so the header feels lit from the top corner rather
+   than floating on dead black. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 520px 380px at 18% 8%, rgba(139, 139, 245, 0.10), transparent 65%),
+    radial-gradient(ellipse 420px 300px at 92% 94%, rgba(139, 139, 245, 0.04), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body > #root {
+  position: relative;
+  z-index: 1;
+}
+
 *::-webkit-scrollbar { display: none; }
 * { -webkit-tap-highlight-color: transparent; }
 
-@keyframes fu { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fi { from { opacity: 0; } to { opacity: 1; } }
-.fu  { animation: fu .5s ease both; }
-.fu1 { animation: fu .5s ease .1s both; }
-.fu2 { animation: fu .5s ease .2s both; }
-.fu3 { animation: fu .5s ease .3s both; }
-.fu4 { animation: fu .5s ease .4s both; }
-.fi  { animation: fi .4s ease both; }
+/* Motion primitives — ported from v8 prototype */
+@keyframes fu    { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fi    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sfr   { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes sfl   { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pop   { 0% { transform: scale(1); } 40% { transform: scale(.94); } 70% { transform: scale(1.03); } 100% { transform: scale(1); } }
+@keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes numIn { from { opacity: 0; transform: scale(.4) rotate(-10deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.fu   { animation: fu .55s cubic-bezier(.2,.7,.2,1) both; }
+.fu1  { animation: fu .55s cubic-bezier(.2,.7,.2,1) .08s both; }
+.fu2  { animation: fu .55s cubic-bezier(.2,.7,.2,1) .18s both; }
+.fu3  { animation: fu .6s  cubic-bezier(.2,.7,.2,1) .32s both; }
+.fu4  { animation: fu .6s  cubic-bezier(.2,.7,.2,1) .48s both; }
+.fi   { animation: fi .4s ease both; }
+.sfr  { animation: sfr .5s cubic-bezier(.2,.7,.2,1) both; }
+.sfl  { animation: sfl .5s cubic-bezier(.2,.7,.2,1) both; }
+.num-in { animation: numIn .5s cubic-bezier(.2,.7,.2,1) .3s both; display: inline-block; }
+.cursor-blink { animation: pulse 1.2s ease-in-out .9s infinite both; }
+.slash-grow {
+  transform-origin: left center;
+  animation: grow .7s cubic-bezier(.2,.7,.2,1) .55s both;
+}
+.bar-grow {
+  transform-origin: left center;
+  animation: grow .6s cubic-bezier(.2,.7,.2,1) both;
+}
+.float { animation: float 3s ease-in-out infinite; }
+
+/* Press feedback — use on buttons via className 'pressable' */
+.pressable { transition: transform .15s cubic-bezier(.2,.7,.2,1); }
+.pressable:active { animation: pop .3s cubic-bezier(.2,.7,.2,1); }

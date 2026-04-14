@@ -50,7 +50,7 @@ export default function Navigation() {
                 height="22"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={isActive ? 'var(--color-accent)' : 'var(--color-t4)'}
+                stroke={isActive ? 'var(--color-accent)' : 'var(--color-t2)'}
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -59,7 +59,7 @@ export default function Navigation() {
               </svg>
               <span
                 className="text-[10px] font-semibold"
-                style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-t4)' }}
+                style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-t2)' }}
               >
                 {item.label}
               </span>

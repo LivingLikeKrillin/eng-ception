@@ -32,7 +32,7 @@ export default function Learn() {
         <div className="px-6 pt-5">
           <button
             onClick={() => navigate('/')}
-            className="text-t4 hover:text-t2 transition"
+            className="text-t2 hover:text-t1 transition"
             aria-label="뒤로"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
@@ -56,16 +56,16 @@ export default function Learn() {
               onChange={(e) => setCustomInput(e.target.value)}
               placeholder="한국어로 그냥 적어봐. 맞춤법 신경 쓸 필요 없어."
               rows={4}
-              className="w-full bg-transparent border-none text-t1 text-base leading-relaxed resize-none outline-none font-ko placeholder:text-t4"
+              className="w-full bg-transparent border-none text-t1 text-base leading-relaxed resize-none outline-none font-ko placeholder:text-t3"
               autoFocus
             />
             <button
               onClick={() => startCustom(customInput)}
               disabled={!customInput.trim()}
-              className={`w-full mt-3 h-[52px] rounded-[14px] text-[15px] font-semibold transition-all ${
+              className={`pressable w-full mt-3 h-[52px] rounded-[14px] text-[15px] font-semibold transition-all ${
                 customInput.trim()
-                  ? 'bg-accent text-white shadow-[0_4px_20px_rgba(139,139,245,0.2)] active:scale-[0.97]'
-                  : 'bg-c2 text-t4 cursor-default'
+                  ? 'bg-accent text-white shadow-[0_4px_20px_rgba(139,139,245,0.25)]'
+                  : 'bg-c2 text-t3 cursor-default'
               }`}
             >
               풀어보기
@@ -77,7 +77,7 @@ export default function Learn() {
   }
 
   if (!originalKorean && !isCustom) {
-    return <div className="flex-1 flex items-center justify-center text-t4 text-sm">로딩 중...</div>
+    return <div className="flex-1 flex items-center justify-center text-t3 text-sm">로딩 중...</div>
   }
 
   return (

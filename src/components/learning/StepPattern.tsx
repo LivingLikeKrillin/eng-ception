@@ -56,7 +56,7 @@ export default function StepPattern() {
                 ))}
               </div>
               <div className="bg-c2 rounded-[10px] p-3 space-y-1">
-                <p className="text-xs text-t4 leading-relaxed">{p.exampleOriginal}</p>
+                <p className="text-xs text-t2 leading-relaxed">{p.exampleOriginal}</p>
                 <p className="text-xs text-t2 font-medium font-en leading-relaxed">
                   {p.exampleEnglish}
                 </p>
@@ -79,7 +79,7 @@ export default function StepPattern() {
 
       <button
         onClick={handleComplete}
-        className="w-full h-[52px] rounded-[14px] bg-accent text-white text-[15px] font-semibold shadow-[0_4px_20px_rgba(139,139,245,0.2)] active:scale-[0.97] transition-all"
+        className="pressable w-full h-[52px] rounded-[14px] bg-accent text-white text-[15px] font-semibold shadow-[0_4px_20px_rgba(139,139,245,0.25)] transition-all"
       >
         학습 완료
       </button>

@@ -46,7 +46,7 @@ export default function StepRestructure() {
       {/* 원문 */}
       <div>
         {scenario && (
-          <p className="text-[11px] text-t4 mb-2 font-semibold tracking-wide uppercase font-en">
+          <p className="text-[11px] text-t3 mb-2 font-semibold tracking-wide uppercase font-en">
             {scenario.situation}
           </p>
         )}
@@ -72,7 +72,7 @@ export default function StepRestructure() {
           <div className="space-y-2">
             {parts.map((part, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs font-semibold font-en text-t4 w-4 shrink-0">
+                <span className="text-xs font-semibold font-en text-t3 w-4 shrink-0">
                   {i + 1}
                 </span>
                 <input
@@ -80,12 +80,12 @@ export default function StepRestructure() {
                   value={part}
                   onChange={(e) => updatePart(i, e.target.value)}
                   placeholder="쉬운 한국어로..."
-                  className="flex-1 bg-c border border-transparent focus:border-accent/40 rounded-[14px] px-4 py-3.5 text-sm text-t1 placeholder:text-t4 outline-none transition-all"
+                  className="flex-1 bg-c border border-transparent focus:border-accent/40 rounded-[14px] px-4 py-3.5 text-sm text-t1 placeholder:text-t3 outline-none transition-all"
                 />
                 {parts.length > 1 && (
                   <button
                     onClick={() => removePart(i)}
-                    className="text-t4 hover:text-t2 text-lg shrink-0 transition"
+                    className="text-t2 hover:text-t1 text-lg shrink-0 transition"
                     aria-label="삭제"
                   >
                     ×
@@ -107,10 +107,10 @@ export default function StepRestructure() {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit || isLoading}
-            className={`w-full h-[52px] rounded-[14px] text-[15px] font-semibold transition-all ${
+            className={`pressable w-full h-[52px] rounded-[14px] text-[15px] font-semibold transition-all ${
               canSubmit && !isLoading
-                ? 'bg-accent text-white shadow-[0_4px_20px_rgba(139,139,245,0.2)] active:scale-[0.97]'
-                : 'bg-c2 text-t4 cursor-default'
+                ? 'bg-accent text-white shadow-[0_4px_20px_rgba(139,139,245,0.2)] '
+                : 'bg-c2 text-t3 cursor-default'
             }`}
           >
             {isLoading ? '분석 중...' : '제출하기'}
@@ -120,7 +120,7 @@ export default function StepRestructure() {
         aiRestructure && (
           <div className="space-y-4 fu1">
             <div>
-              <p className="text-[11px] font-semibold text-t4 mb-2 tracking-wider uppercase font-en">
+              <p className="text-[11px] font-semibold text-t3 mb-2 tracking-wider uppercase font-en">
                 나의 시도
               </p>
               <div className="bg-c2 rounded-[14px] p-4 space-y-1">
@@ -128,7 +128,7 @@ export default function StepRestructure() {
                   .filter((p) => p.trim())
                   .map((p, i) => (
                     <p key={i} className="text-sm text-t2">
-                      <span className="text-t4 font-en mr-2">{i + 1}</span>
+                      <span className="text-t3 font-en mr-2">{i + 1}</span>
                       {p}
                     </p>
                   ))}
@@ -147,7 +147,7 @@ export default function StepRestructure() {
 
             <button
               onClick={handleNext}
-              className="w-full h-[52px] rounded-[14px] bg-accent text-white text-[15px] font-semibold shadow-[0_4px_20px_rgba(139,139,245,0.2)] active:scale-[0.97] transition-all"
+              className="pressable w-full h-[52px] rounded-[14px] bg-accent text-white text-[15px] font-semibold shadow-[0_4px_20px_rgba(139,139,245,0.25)] transition-all"
             >
               영작 시도하기 →
             </button>

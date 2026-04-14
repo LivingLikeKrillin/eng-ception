@@ -9,7 +9,7 @@ export default function FeedbackCard({ title, items }: FeedbackCardProps) {
       <h3 className="text-[13px] font-semibold text-accent tracking-wide">{title}</h3>
       {items.map((item, i) => (
         <div key={i} className="space-y-2">
-          <p className="text-[11px] font-semibold text-t4 tracking-wider uppercase font-en">
+          <p className="text-[11px] font-semibold text-t3 tracking-wider uppercase font-en">
             {item.label}
           </p>
           {Array.isArray(item.content) ? (

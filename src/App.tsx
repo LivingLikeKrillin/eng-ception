@@ -8,7 +8,7 @@ import Review from './pages/Review'
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-bg text-t1 font-ko">
+      <div className="min-h-screen text-t1 font-ko relative">
         <div className="max-w-[393px] mx-auto min-h-screen flex flex-col relative pb-24">
           <Routes>
             <Route path="/" element={<Home />} />
