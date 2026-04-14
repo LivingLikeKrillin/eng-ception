@@ -13,8 +13,7 @@ class MemStorage {
 }
 
 beforeEach(() => {
-  // @ts-expect-error test shim
-  globalThis.localStorage = new MemStorage()
+  globalThis.localStorage = new MemStorage() as unknown as Storage
 })
 
 describe('localStorageAdapter.init', () => {
