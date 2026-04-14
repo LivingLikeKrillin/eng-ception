@@ -12,6 +12,9 @@ dist
 # Superpowers planning files
 .superpowers/
 
+# Claude Code local settings
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
