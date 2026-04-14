@@ -1,40 +1,34 @@
 import { useLearningStore } from '../../store/learningStore'
 import StepIndicator from '../common/StepIndicator'
-import StepDecompose from './StepDecompose'
-import StepAiDecompose from './StepAiDecompose'
-import StepEasyKorean from './StepEasyKorean'
-import StepAiEasyKorean from './StepAiEasyKorean'
+import StepRestructure from './StepRestructure'
 import StepEnglish from './StepEnglish'
-import StepAiEnglish from './StepAiEnglish'
 import StepPattern from './StepPattern'
-
-const stepComponents: Record<string, React.FC> = {
-  decompose: StepDecompose,
-  'ai-decompose': StepAiDecompose,
-  'easy-korean': StepEasyKorean,
-  'ai-easy-korean': StepAiEasyKorean,
-  english: StepEnglish,
-  'ai-english': StepAiEnglish,
-  pattern: StepPattern,
-}
 
 export default function LearningFlow() {
   const { currentStep, error } = useLearningStore()
-  const StepComponent = stepComponents[currentStep]
 
-  if (!StepComponent) return null
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'restructure':
+        return <StepRestructure />
+      case 'english':
+        return <StepEnglish />
+      case 'pattern':
+        return <StepPattern />
+      default:
+        return null
+    }
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 flex flex-col">
       <StepIndicator current={currentStep} />
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">
+        <div className="mx-6 mt-4 bg-warn/[0.04] border border-warn/10 rounded-[10px] px-4 py-3 text-sm text-warn">
           {error}
         </div>
       )}
-      <div className="px-4">
-        <StepComponent />
-      </div>
+      <div className="flex-1 px-6 py-6 overflow-y-auto">{renderStep()}</div>
     </div>
   )
 }

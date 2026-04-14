@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg: #111113;
+  --color-c: #18181C;
+  --color-c2: #1E1E23;
+  --color-line: #27272C;
+  --color-t1: #E8E8EC;
+  --color-t2: #A0A0A8;
+  --color-t3: #68686F;
+  --color-t4: #45454B;
+  --color-accent: #8B8BF5;
+  --color-accent-soft: rgba(139, 139, 245, 0.08);
+  --color-ok: #5EC492;
+  --color-warn: #D4975A;
+
+  --font-ko: 'Pretendard Variable', 'Pretendard', -apple-system, system-ui, sans-serif;
+  --font-en: 'Geist', 'Inter', 'SF Pro Display', -apple-system, sans-serif;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-t1);
+  font-family: var(--font-ko);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.2px;
+}
+
+*::-webkit-scrollbar { display: none; }
+* { -webkit-tap-highlight-color: transparent; }
+
+@keyframes fu { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fi { from { opacity: 0; } to { opacity: 1; } }
+.fu  { animation: fu .5s ease both; }
+.fu1 { animation: fu .5s ease .1s both; }
+.fu2 { animation: fu .5s ease .2s both; }
+.fu3 { animation: fu .5s ease .3s both; }
+.fu4 { animation: fu .5s ease .4s both; }
+.fi  { animation: fi .4s ease both; }

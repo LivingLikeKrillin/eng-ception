@@ -1,33 +1,34 @@
+import { useNavigate } from 'react-router-dom'
 import type { LearningStep } from '../../types'
 
-const STEPS: { key: LearningStep; label: string }[] = [
-  { key: 'decompose', label: '쪼개기' },
-  { key: 'ai-decompose', label: 'AI 분해' },
-  { key: 'easy-korean', label: '쉬운 한국어' },
-  { key: 'ai-easy-korean', label: 'AI 한국어' },
-  { key: 'english', label: '영어 시도' },
-  { key: 'ai-english', label: 'AI 영어' },
-  { key: 'pattern', label: '패턴' },
-]
+const ORDER: LearningStep[] = ['restructure', 'english', 'pattern']
 
 export default function StepIndicator({ current }: { current: LearningStep }) {
-  const currentIdx = STEPS.findIndex((s) => s.key === current)
+  const navigate = useNavigate()
+  const idx = ORDER.indexOf(current)
+  const total = ORDER.length
+  const progress = ((idx + 1) / total) * 100
 
   return (
-    <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto">
-      {STEPS.map((step, i) => (
-        <div key={step.key} className="flex items-center gap-1 shrink-0">
-          <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-              ${i < currentIdx ? 'bg-sky-500 text-white' : i === currentIdx ? 'bg-sky-600 text-white ring-2 ring-sky-300' : 'bg-gray-200 text-gray-400'}`}
-          >
-            {i + 1}
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={`w-3 h-0.5 ${i < currentIdx ? 'bg-sky-500' : 'bg-gray-200'}`} />
-          )}
-        </div>
-      ))}
+    <div className="px-6 pt-4 flex items-center gap-5">
+      <button
+        onClick={() => navigate('/')}
+        className="text-t4 hover:text-t2 transition"
+        aria-label="뒤로"
+      >
+        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+          <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div className="flex-1 h-[3px] bg-c2 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-accent rounded-full transition-[width] duration-500 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <span className="text-xs font-en text-t4 tabular-nums">
+        {idx + 1}/{total}
+      </span>
     </div>
   )
 }

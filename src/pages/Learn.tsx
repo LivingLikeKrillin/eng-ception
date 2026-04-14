@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLearningStore } from '../store/learningStore'
 import { localStorageAdapter as db } from '../store/localStorage'
 import LearningFlow from '../components/learning/LearningFlow'
@@ -7,8 +7,11 @@ import LearningFlow from '../components/learning/LearningFlow'
 export default function Learn() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { currentStep, startScenario, startCustom, originalKorean } = useLearningStore()
-  const [customInput, setCustomInput] = useState('')
+  const location = useLocation()
+  const { currentStep, startScenario, startCustom, originalKorean } =
+    useLearningStore()
+  const passedInput = (location.state as { input?: string })?.input ?? ''
+  const [customInput, setCustomInput] = useState(passedInput)
   const isCustom = id === 'custom' || !id
 
   useEffect(() => {
@@ -18,45 +21,67 @@ export default function Learn() {
         else navigate('/')
       })
     }
-  }, [id, isCustom, startScenario, navigate])
+    if (isCustom && passedInput.trim() && currentStep === 'input') {
+      startCustom(passedInput)
+    }
+  }, [id, isCustom, startScenario, startCustom, navigate, passedInput, currentStep])
 
-  if (isCustom && currentStep === 'original') {
+  if (isCustom && currentStep === 'input') {
     return (
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← 뒤로
-        </button>
-        <h1 className="text-xl font-bold text-gray-800">내 문장 입력</h1>
-        <p className="text-sm text-gray-500">영어로 말하고 싶은 한국어 문장을 입력하세요.</p>
-        <textarea
-          value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          placeholder="예: 그 말이 틀렸다는 건 아닌데, 지금 상황에선 좀 안 맞는 것 같아."
-          rows={4}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none"
-        />
-        <button
-          onClick={() => startCustom(customInput)}
-          disabled={!customInput.trim()}
-          className="w-full bg-sky-500 text-white rounded-lg py-3 text-sm font-medium disabled:opacity-40 hover:bg-sky-600 transition"
-        >
-          학습 시작
-        </button>
+      <div className="flex-1 flex flex-col">
+        <div className="px-6 pt-5">
+          <button
+            onClick={() => navigate('/')}
+            className="text-t4 hover:text-t2 transition"
+            aria-label="뒤로"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+              <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center px-6 pb-10">
+          <div className="fu mb-8">
+            <p className="text-[15px] text-t3 mb-3 leading-relaxed">말문 막힌 순간</p>
+            <h1 className="text-[26px] font-bold leading-snug tracking-tight">
+              그거, 여기다<br />
+              <span className="text-accent">풀어봐.</span>
+            </h1>
+          </div>
+
+          <div className="fu1 bg-c rounded-[20px] p-5 border border-transparent focus-within:border-accent/40 transition-all">
+            <textarea
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              placeholder="한국어로 그냥 적어봐. 맞춤법 신경 쓸 필요 없어."
+              rows={4}
+              className="w-full bg-transparent border-none text-t1 text-base leading-relaxed resize-none outline-none font-ko placeholder:text-t4"
+              autoFocus
+            />
+            <button
+              onClick={() => startCustom(customInput)}
+              disabled={!customInput.trim()}
+              className={`w-full mt-3 h-[52px] rounded-[14px] text-[15px] font-semibold transition-all ${
+                customInput.trim()
+                  ? 'bg-accent text-white shadow-[0_4px_20px_rgba(139,139,245,0.2)] active:scale-[0.97]'
+                  : 'bg-c2 text-t4 cursor-default'
+              }`}
+            >
+              풀어보기
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!originalKorean && !isCustom) {
-    return <div className="p-4 text-center text-gray-400">로딩 중...</div>
+    return <div className="flex-1 flex items-center justify-center text-t4 text-sm">로딩 중...</div>
   }
 
   return (
-    <div className="max-w-lg mx-auto py-6">
-      <div className="px-4 mb-4">
-        <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← 뒤로
-        </button>
-      </div>
+    <div className="flex-1 flex flex-col">
       <LearningFlow />
     </div>
   )

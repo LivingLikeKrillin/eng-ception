@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="logo.png" alt="Eng-ception" width="320" />
+
 # `Eng-ception`
 
 **번역하지 말고, 말할 수 있게 바꾸자.**

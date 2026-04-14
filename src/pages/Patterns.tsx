@@ -22,60 +22,83 @@ export default function Patterns() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-      <h1 className="text-xl font-bold text-gray-800">내 패턴 라이브러리</h1>
-
-      <div className="flex gap-2 flex-wrap">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`text-xs px-3 py-1.5 rounded-full font-medium transition ${
-              activeCategory === cat
-                ? 'bg-sky-500 text-white'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+    <div className="flex-1 flex flex-col">
+      <div className="px-6 pt-5 pb-4">
+        <p className="text-[11px] font-semibold text-t4 mb-2 tracking-wider uppercase font-en">
+          Library
+        </p>
+        <h1 className="text-[24px] font-bold tracking-tight text-t1">내 구조 패턴</h1>
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-8">
-          저장된 패턴이 없습니다. 학습을 완료하면 패턴이 쌓여요.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((p) => (
-            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-              <p className="text-base font-bold text-sky-700">{p.template}</p>
-              <div className="flex gap-1 flex-wrap">
-                {p.tags.map((tag) => (
-                  <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                    #{tag}
+      <div className="px-6 pb-4 flex gap-1.5 flex-wrap">
+        {CATEGORIES.map((cat) => {
+          const active = activeCategory === cat
+          return (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`text-xs px-3 py-1.5 rounded-full font-semibold transition ${
+                active
+                  ? 'bg-accent text-white'
+                  : 'bg-c text-t3 hover:text-t2 border border-line'
+              }`}
+            >
+              {cat}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex-1 px-6 pb-6">
+        {filtered.length === 0 ? (
+          <p className="text-sm text-t4 text-center py-16">
+            저장된 패턴이 없어요.<br />학습을 완료하면 패턴이 쌓여요.
+          </p>
+        ) : (
+          <div className="space-y-2.5">
+            {filtered.map((p) => (
+              <div
+                key={p.id}
+                className="bg-c border border-line rounded-[16px] p-5 space-y-3"
+              >
+                <p className="text-base font-semibold text-accent font-en leading-relaxed">
+                  {p.template}
+                </p>
+                <div className="flex gap-1.5 flex-wrap">
+                  <span className="text-[11px] bg-accent/[0.08] text-accent px-2 py-1 rounded-md font-medium">
+                    {p.category}
                   </span>
-                ))}
+                  {p.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[11px] bg-c2 text-t3 px-2 py-1 rounded-md"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="bg-c2 rounded-[10px] p-3 space-y-1">
+                  <p className="text-xs text-t4 leading-relaxed">{p.exampleOriginal}</p>
+                  <p className="text-xs text-t2 font-medium font-en leading-relaxed">
+                    {p.exampleEnglish}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-t4 font-en">
+                    {new Date(p.savedAt).toLocaleDateString('ko-KR')}
+                  </span>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    className="text-[11px] text-t4 hover:text-warn transition"
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                <p className="text-xs text-gray-500">{p.exampleOriginal}</p>
-                <p className="text-xs text-gray-600 font-medium">{p.exampleEnglish}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">
-                  {new Date(p.savedAt).toLocaleDateString('ko-KR')}
-                </span>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="text-xs text-red-400 hover:text-red-600"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
