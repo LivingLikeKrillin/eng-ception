@@ -526,10 +526,10 @@ Prediction drill screen gets a small addition — the pattern label appears **af
 
 This is a 3-line addition. Cognitively cheap, pedagogically powerful.
 
-### 12.6 Open questions for v9 amendment
+### 12.6 Resolved questions for v9 amendment
 
-| # | Question | Leaning |
-|---|---|---|
-| A1 | Show patternId label on every quiz, or only first encounter per session? | **Every quiz** — repetition reinforces |
-| A2 | If a quiz position has no 5형식 trigger, still place a non-pattern quiz? | **Yes**, but tag as `patternId: null` and don't count in pattern stats |
-| A3 | Should Phase 3 pattern card display the `patternId` chip prominently, or subtly? | **Prominently** — this is the user's main takeaway label |
+| # | Question | Decision | Rationale |
+|---|---|---|---|
+| A1 | Show patternId label on every Phase 2 quiz, or only first encounter per session? | **(a) Every quiz.** | Same pattern recurring in one session = that pattern is the segment's core. Repetition is the lesson, not noise. Label card is small (3 lines), low visual cost. |
+| A2 | If a quiz position has no 5형식 trigger, still place a non-pattern quiz? | **(b) Yes, with `patternId: null`.** Server quality bar: ≥60% quizzes target 5형식, ≤40% non-pattern. | 5형식 is the biggest lever but not the only one — collocation, idiom, topic shift also produce stalls. Without non-pattern quizzes, segments with sparse 5형식 triggers have too few drill points → density drops. `patternId: null` keeps data model clean (excluded from pattern stats). |
+| A3 | Pattern5HChip on Phase 3 card: prominent or subtle? | **(a) Prominent.** Same `Pattern5HChip` component as v9 speaking Step 0. | Phase 3 is the takeaway moment — "what did I gain today?". Strong pattern label drives recognition on next encounter. Queue card carries the same chip into Home → consistent visual cue across listening → speaking flow. |

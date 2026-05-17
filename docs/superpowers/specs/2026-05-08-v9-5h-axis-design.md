@@ -438,15 +438,15 @@ This ensures speaking sessions can train all 7 patterns even before listening mo
 
 ---
 
-## 13. Open questions
+## 13. Resolved questions
 
-| # | Question | Options | Leaning |
+| # | Question | Decision | Rationale |
 |---|---|---|---|
-| Q1 | Should `pattern5h` be required in every session, or optional for sentences that don't naturally fit a 5형식 pattern? | (a) Always required (force one) (b) Optional with fallback message | (a) — forcing it keeps training focused; weak fits are still teaching moments |
-| Q2 | Should the comparison card show 3형식 awkward version *always*, or only when 3형식 would be plausible? | (a) Always (b) Only when the 3형식 detour is a real failure mode | (b) — but err toward showing it; the contrast is the lesson |
-| Q3 | Should `patternQuiz` allow "확실치 않음" as a 3rd option? | (a) 2 options only (b) Add "잘 모르겠어" → reveals answer | (b) — reduces gambling; if user genuinely doesn't know, give them the answer |
-| Q4 | Should we expose `verbs` array in UI (e.g., "이 패턴의 다른 동사: make, have, let")? | (a) Yes, always show on Step 3 (b) Only in Patterns page | (a) — increases verb-pattern association from day 1 |
-| Q5 | Should saved Pattern's `template` be verb-agnostic ("make/have/let + O + V") or verb-specific ("I let + O + V")? | (a) Verb-agnostic per pattern (b) Verb-specific per session | (b) — concrete is better for recall; users can navigate by pattern ID for the abstract view |
+| Q1 | Is `pattern5h` required in every session? | **(a) Always required.** Claude must map to one of the 7 patterns. | Optional would let Claude take the easy path too often → 5형식 exposure drops. Weak matches still teach (사용자가 "이건 굳이 5형식 안 써도 되는구나" 인지). Diagnostic consistency. Tone caveat: weak matches must phrase `whyAwkward` honestly ("이건 3형식도 자연스러워. 다만 5형식으로 가면..."). |
+| Q2 | Comparison card: always or conditional? | **(b) Conditional via `comparison.show: boolean`.** | Forcing 3형식-awkward content on weak matches breaks trust. When shown, impact is high ("이건 진짜 5형식이 자연스러운 경우구나"). Claude decides per session. |
+| Q3 | Add "잘 모르겠어" 3rd option to patternQuiz? | **(b) Add it.** Visually de-emphasized (text-t3, small). | 2-option forces guessing → no learning. "잘 모르겠어" signals "this pattern needs more exposure", feeds diagnostic. De-emphasis prevents abuse as escape hatch. |
+| Q4 | Show pattern's other verbs on Step 3? | **(a) Always show.** Main verb bold, others in text-t3. | Step 3 is the strong "what I learned" moment. Showing the pattern family (max 5 verbs) accelerates verb-pattern generalization. Low cognitive cost. Aligns with cross-mode loop. |
+| Q5 | Saved Pattern template: verb-agnostic or verb-specific? | **(b) Verb-specific.** ("I made him angry") | Concrete recall is what produces speech automaticity. Abstract grouping is provided by Patterns page (auto-groups by patternId). Dedup: same patternId + same triggerVerb increments save count, doesn't create duplicate card. |
 
 ---
 
