@@ -393,7 +393,52 @@ v9 is a fresh build on master. Suggested chunk order (formalize in a plan docume
 
 ---
 
-## 12. Open questions
+## 12. Mode-specific pattern emphasis
+
+The 7-pattern taxonomy is **shared between speaking and listening modes**, but the natural distribution of patterns differs by mode. This is not a bug — it reflects how the two modes naturally surface different speech styles.
+
+### 12.1 Speaking mode bias: reflective patterns
+
+User-initiated speaking sessions (custom input + reflective scenarios) naturally lean toward:
+- `causative-bare` (made me feel, let me know) — Korean compresses cause+effect into one clause
+- `judgment` (find it strange, call it a day) — reflection on experiences
+- `causative-result` (have it sorted, get it fixed) — talking about plans/outcomes
+- `want-toV` (need you to listen, ask you to consider) — interpersonal requests
+
+These 4 patterns will dominate speaking session distribution. **This is acceptable** because users come to the app to express the language they're already thinking in — and Korean reflective speech compresses naturally into these patterns.
+
+### 12.2 Listening mode coverage: full 7 patterns
+
+Curated podcast content (Hidden Brain, Radiolab) naturally produces all 7 patterns because:
+- `perception` (saw him cry, heard her say) — narrative storytelling
+- `ditransitive` (tell me the truth, give us a chance) — dialog and direct address
+- `causative-toV` (got him to admit, tried to get her to call) — goal-oriented language
+
+Listening mode is where users gain exposure to the 3 patterns that rarely appear in their own reflective speech.
+
+### 12.3 Cross-mode reinforcement
+
+Patterns surfaced in listening flow into speaking via the queue model (defined in listening spec §5.3). This means:
+- User encounters `perception` pattern in a Hidden Brain segment
+- Pattern enters speaking queue with `patternId: 'perception'` + Korean bridge
+- Next Home visit, user runs a speaking session that uses `perception`
+- User's reflective speech vocabulary expands beyond the natural 4-pattern bias
+
+This is the strategic loop. Speaking mode alone would never get the user to fluency on all 7 patterns. The cross-mode loop is the mechanism.
+
+### 12.4 Scenario seed expansion
+
+Speaking seed scenarios are expanded from 10 → 15:
+- s1~s10: original reflective scenarios (4-pattern emphasis)
+- s11~s12: `ditransitive` scenarios (가벼운 부탁, 솔직한 의견)
+- s13~s14: `perception` scenarios (목격, 우연한 청취)
+- s15: `causative-toV` scenario (설득의 결과)
+
+This ensures speaking sessions can train all 7 patterns even before listening mode is live, and seeds the SRS library with all categories represented.
+
+---
+
+## 13. Open questions
 
 | # | Question | Options | Leaning |
 |---|---|---|---|
@@ -402,3 +447,50 @@ v9 is a fresh build on master. Suggested chunk order (formalize in a plan docume
 | Q3 | Should `patternQuiz` allow "확실치 않음" as a 3rd option? | (a) 2 options only (b) Add "잘 모르겠어" → reveals answer | (b) — reduces gambling; if user genuinely doesn't know, give them the answer |
 | Q4 | Should we expose `verbs` array in UI (e.g., "이 패턴의 다른 동사: make, have, let")? | (a) Yes, always show on Step 3 (b) Only in Patterns page | (a) — increases verb-pattern association from day 1 |
 | Q5 | Should saved Pattern's `template` be verb-agnostic ("make/have/let + O + V") or verb-specific ("I let + O + V")? | (a) Verb-agnostic per pattern (b) Verb-specific per session | (b) — concrete is better for recall; users can navigate by pattern ID for the abstract view |
+
+---
+
+## Appendix A. Taxonomy validation (2026-05-08)
+
+Before finalizing the 7-pattern taxonomy, we mapped each of the existing 10 seed scenarios to their most natural English form and identified which `Pattern5HId` the result trains.
+
+### A.1 Mapping results
+
+| # | Scenario summary | Natural English | Pattern5H | Fit |
+|---|---|---|---|---|
+| s1 | 네가 틀렸다고... 그 말은 서운했어 | "What you said made me feel hurt" | `causative-bare` | 🟡 weak |
+| s2 | 불가능한 건 아니고 일정이 무리 | "Timeline makes it tough" / "Find it tight" | `causative-bare` / `judgment` | 🟢 good |
+| s3 | 엄청 재밌었던 건 아닌데 기억에 남아 | "I find it strange how it stuck" | `judgment` | 🟢 good |
+| s4 | 처음엔 별생각 없었는데 재밌더라 | "Found it pretty fun" | `judgment` | 🟡 moderate |
+| s5 | 좀 막혀 있는데 정리할 수 있어 | "I'll have it sorted" | `causative-result` | 🟢 perfect |
+| s6 | 해줄 건 없지만 마음은 이해해 | "Let me know if anything" | `causative-bare` | 🟡 moderate |
+| s7 | 유명한 건 아닌데 분위기 좋았어 | "It just made me feel at ease" | `causative-bare` | 🟢 good |
+| s8 | 그 방향도 좋은데 다른 쪽도... | "Could I ask you to consider..." | `want-toV` | 🟡 weak |
+| s9 | 진짜 미안, 기다리게 해서 | "Sorry I made you wait" | `causative-bare` | 🟢 perfect |
+| s10 | 다 바뀌었는데 그때 느낌이 남아 | "It made me feel like I was back" | `causative-bare` | 🟡 moderate |
+
+### A.2 Distribution (s1~s10 only)
+
+| Pattern | Count | % |
+|---|---|---|
+| `causative-bare` | 6 | 60% |
+| `judgment` | 3 | 30% |
+| `causative-result` | 1 | 10% |
+| `want-toV` | 1 | 10% |
+| `causative-toV` | 0 | 0% |
+| `perception` | 0 | 0% |
+| `ditransitive` | 0 | 0% |
+
+### A.3 Findings
+
+1. **Taxonomy itself works**: every scenario maps to *some* pattern; the 7 patterns cover the Korean→English transformation space.
+2. **`causative-bare` overrepresentation (60%) is real**, not an artifact: Korean compresses cause+effect tightly, and the natural English version compresses back via 사역동사.
+3. **3 patterns had zero matches** in the original seed: `causative-toV`, `perception`, `ditransitive`. These patterns naturally appear in *transactional / observational* speech, not the *reflective* speech that the original 10 scenarios capture.
+4. **Only 4/10 are 🟢 (strong fit)**. The remaining 6 are 🟡 — 5형식 is possible but not always the most natural choice. The comparison card needs to be honest about this; some sessions will show a less dramatic 3형식-vs-5형식 contrast than others.
+
+### A.4 Decisions taken
+
+- **Keep all 7 patterns** (validated by listening mode coverage)
+- **Add 5 new seed scenarios** (s11~s15) covering the 3 underrepresented patterns
+- **Document the mode-specific emphasis** (§12) so the asymmetry is intentional, not a defect
+- **Mark the comparison card content quality** (Q2 in open questions) as a key prompt engineering concern
