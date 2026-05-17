@@ -389,3 +389,147 @@ Listening training uses the **same warm, casual coach tone (따뜻한 반말)** 
 | Q3 | Difficulty indicator before starting? | **Yes.** Show WPM / speaker count / topic on segment card. | Curated model has limited selection. Users need enough info to self-select appropriate difficulty. Reduces early abandonment. |
 | Q4 | Audio format? | **MP3.** | Podcast source audio is already MP3. Speech audio doesn't benefit from AAC quality gains. Maximum browser + RN compatibility. |
 | Q5 | Track zero-stall segments as positive signal? | **Yes.** Show "stall 0회 — 집중해서 들었다면 좋은 신호야" | Individual zero-stall sessions may be noise (forgot to tap). But accumulated zero-stall pattern at specific speeds/speakers becomes real progress evidence over time. |
+
+---
+
+## 12. Amendment v9 — 5형식 axis alignment (2026-05-08)
+
+This amendment aligns the listening spec with the v9 speaking spec (`2026-05-08-v9-5h-axis-design.md`). The 5형식 axis (`Pattern5HId`) becomes a shared first-class field across both modes so that:
+
+- Server-curated prediction quizzes target **5형식 trigger verbs** specifically (highest training value)
+- Listening patterns carry `patternId` through to the speaking queue, preserving categorization
+- Diagnostic dashboards can aggregate proficiency across both modes by `Pattern5HId`
+
+### 12.1 Why this matters strategically
+
+Listening mode is where users gain exposure to the **3 patterns underrepresented in their own reflective speech**: `causative-toV`, `perception`, `ditransitive`. Narrative podcasts (Hidden Brain, Radiolab) naturally produce these in abundance:
+
+- `perception`: "I **saw him hesitate**", "We **heard her admit**"
+- `ditransitive`: "Let me **tell you something**", "She **gave us a chance**"
+- `causative-toV`: "What **got me to think** about this", "We **tried to get him to talk**"
+
+Without explicit pattern tagging, these training moments would be invisible. With it, the system can:
+1. Place Pause-and-Predict quizzes precisely at these verb positions (highest cognitive payoff)
+2. Surface "you encountered 3 new `perception` patterns this week" in diagnostics
+3. Feed the speaking queue with patterns the user has *just heard* — closing the input→output loop
+
+### 12.2 Updated data model
+
+```typescript
+// Imported from v9 speaking spec — single source of truth
+import type { Pattern5HId } from '../types/v9'
+
+interface ListeningChunk {
+  id: string
+  startTime: number
+  endTime: number
+  transcript: string
+  prediction?: PredictionQuiz
+}
+
+interface PredictionQuiz {
+  contextEndTime: number
+  choices: PredictionChoice[]      // exactly 3
+  stallReason: string
+
+  // NEW (v9):
+  patternId: Pattern5HId           // which 5형식 pattern the quiz targets
+  triggerVerb: string              // the exact verb that triggered placement ("made", "saw", etc.)
+  slot: 'after-verb' | 'after-object' | 'complement'  // position within the pattern
+}
+
+interface ListeningPattern {
+  template: string                 // "saw + O + V" or "I saw him hesitate"
+  tags: string[]
+  koreanBridge: string
+
+  // NEW (v9):
+  patternId: Pattern5HId           // which 5형식 pattern
+  triggerVerb: string              // the headline verb
+}
+
+interface ListeningRecord {
+  // ... existing fields ...
+
+  // NEW (v9):
+  patternCounts: Partial<Record<Pattern5HId, {
+    encountered: number            // how many quizzes for this pattern in this session
+    correct: number                // how many user got right
+  }>>
+}
+```
+
+### 12.3 Server pipeline requirement updates
+
+The server pipeline now needs to:
+
+1. **Identify 5형식 trigger verbs** in transcript — use the curated 17-verb list from v9 §3
+2. **Place prediction quizzes preferentially** at positions where:
+   - A 5형식 trigger verb just occurred
+   - The next chunk completes the pattern (object + complement)
+3. **Tag each quiz** with the `patternId` it trains
+4. **Extract listening patterns** that fit the 7 5형식 patterns; fall back to "discourse pattern only" if no 5형식 fits
+5. **Generate Korean bridges** that, when fed back into v9 speaking flow, will produce the same `patternId`
+
+Quality bar:
+- ≥60% of quizzes should target a 5형식 pattern (the other ≤40% can be other prediction types: collocation, idiom, topic shift)
+- Each segment should encounter ≥2 distinct `patternId`s
+- Across an episode (5-6 segments), all 7 patterns should appear at least once
+
+### 12.4 Speaking queue handoff
+
+When user taps "이 패턴으로 말하기 훈련" in Phase 3:
+
+```typescript
+interface SpeakingQueueEntry {
+  // Existing
+  koreanBridge: string
+  sourceListeningSegmentId: string
+  sourcePatternTemplate: string
+  queuedAt: string
+
+  // NEW (v9):
+  patternId: Pattern5HId           // ensures the v9 session targets the same pattern
+  triggerVerb: string              // hint for v9's Claude prompt
+}
+```
+
+When the user later runs the queued speaking session, `fetchSessionPayload` includes the `patternId` as a **prompt hint**:
+
+> "이 한국어를 처리할 때 가능하면 `causative-bare` 패턴 (`make/have/let + O + V`)을 사용한 영어로 만들어줘. 이건 사용자가 듣기에서 막 만난 패턴이라 강화하려는 거야."
+
+This is a soft constraint — if the pattern doesn't fit, Claude falls back to whatever is most natural, and the queue entry just logs "pattern target missed" for analytics.
+
+### 12.5 Phase 2 UX update
+
+Prediction drill screen gets a small addition — the pattern label appears **after** the user answers:
+
+```
+┌─────────────────────────────┐
+│ ✓ 맞았어                     │
+│                             │
+│ 🔊 "...saw him hesitate     │
+│      for just a moment."    │
+│                             │
+│ ┌─ 이 패턴 ──────────────┐  │
+│ │ 지각동사                │  │  ← NEW: pattern label
+│ │ see + 목적어 + 동사원형  │  │     reinforces the pattern name
+│ │ "saw him hesitate"      │  │     and shows the user this is
+│ └─────────────────────────┘  │     a recognized pattern group
+│                             │
+│ ┌─ 안 들린 이유 ──────────┐ │
+│ │ "hesitate"가 빠르고     │ │  ← existing stallReason
+│ │ 짧게 발음돼서...         │ │
+│ └─────────────────────────┘ │
+└─────────────────────────────┘
+```
+
+This is a 3-line addition. Cognitively cheap, pedagogically powerful.
+
+### 12.6 Open questions for v9 amendment
+
+| # | Question | Leaning |
+|---|---|---|
+| A1 | Show patternId label on every quiz, or only first encounter per session? | **Every quiz** — repetition reinforces |
+| A2 | If a quiz position has no 5형식 trigger, still place a non-pattern quiz? | **Yes**, but tag as `patternId: null` and don't count in pattern stats |
+| A3 | Should Phase 3 pattern card display the `patternId` chip prominently, or subtly? | **Prominently** — this is the user's main takeaway label |
