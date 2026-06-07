@@ -452,7 +452,7 @@ export function installDevEgress(): void {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/services/analytics.test.ts`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Verify typecheck + lint**
 
@@ -1219,7 +1219,7 @@ Expected: EXIT 0.
 - [ ] **Step 2: Unit/integration suite**
 
 Run: `npx vitest run`
-Expected: PASS. Count = 55 (baseline) + new tests: analyticsSink (3) + localAnalyticsSink (5) + analytics facade (5) + classifyError (1) + event-tracking describe (session_start/fetch ×3, dwell ×1, complete ×1, abandon ×4 = 9) + lifecycle (2) = **+25 → 80 tests** (exact count may differ by ±a few; the gate is GREEN, not a magic number).
+Expected: PASS. Count = 55 (baseline) + new tests: analyticsSink (3) + localAnalyticsSink (5) + analytics facade (6) + classifyError (1) + event-tracking describe (session_start/fetch ×3, dwell ×1, complete ×1, abandon ×4 = 9) + lifecycle (2) = **+26 → 81 tests** (exact count may differ by ±a few; the gate is GREEN, not a magic number).
 
 - [ ] **Step 3: Lint**
 
@@ -1295,7 +1295,7 @@ git commit -m "docs: document event tracking in CLAUDE.md"
 
 ## Done criteria
 
-- `npx tsc -b` EXIT 0 · `npx vitest run` GREEN (≈80) · `npm run lint` clean · `npm run test:e2e` PASS.
+- `npx tsc -b` EXIT 0 · `npx vitest run` GREEN (≈81) · `npm run lint` clean · `npm run test:e2e` PASS.
 - A completed session in dev (`window.__engEvents()`) shows `session_start → fetch_start → fetch_success → step_dwell×6 → session_complete`, one shared `sessionId`, zero raw user text.
 - Abandoning mid-session (navigate away / tab close) yields a `session_abandon{lastStep, reason}`.
 - No external analytics dependency added; `AnalyticsSink` interface is the documented slot-in seam for the post-Firebase remote sink.
