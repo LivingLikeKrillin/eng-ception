@@ -424,4 +424,29 @@ describe('learningStore event tracking', () => {
       expect(e.props.dwellMs as number).toBeGreaterThanOrEqual(0)
     }
   })
+
+  it('emits session_complete with outcome signals + duration before reset', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const sid = useLearningStore.getState().sessionId
+    const payload = useLearningStore.getState().payload!
+    useLearningStore.getState().submitPatternQuiz({ correct: true, unsure: false })
+    useLearningStore.setState({ currentStep: 'step4' })
+
+    await useLearningStore.getState().complete()
+
+    // capture by the captured sid (state is reset by now)
+    const complete = mem.events.find((e) => e.sessionId === sid && e.name === 'session_complete')!
+    expect(complete).toBeDefined()
+    expect(complete.props.pattern5hId).toBe(payload.pattern5h.id)
+    expect(complete.props.triggerVerb).toBe(payload.pattern5h.triggerVerb)
+    expect(complete.props.patternQuizCorrect).toBe(true)
+    expect(complete.props.patternQuizUnsure).toBe(false)
+    expect(typeof complete.props.durationMs).toBe('number')
+
+    // session fully reset
+    expect(useLearningStore.getState().sessionId).toBeNull()
+  })
 })

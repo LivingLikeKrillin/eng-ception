@@ -241,6 +241,17 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     async complete() {
       const s = get()
       if (!s.payload) return
+      if (s.sessionId) {
+        track('session_complete', {
+          pattern5hId: s.payload.pattern5h.id,
+          triggerVerb: s.payload.pattern5h.triggerVerb,
+          assemblyCorrect: isAssemblyCorrect(s),
+          patternQuizCorrect: s.patternQuizAnswer?.correct === true,
+          patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
+          durationMs: Date.now() - (s.sessionStartedAt ?? Date.now()),
+        }, s.sessionId)
+        set({ sessionEnded: true })
+      }
       const record: LearningRecord = {
         id: crypto.randomUUID(),
         schemaVersion: 4,
