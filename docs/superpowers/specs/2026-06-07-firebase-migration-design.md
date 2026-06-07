@@ -183,6 +183,7 @@ Each user can touch only their own subtree. Scenarios aren't in Firestore, so ne
 - **Kakao (phase 2)**: client gets a Kakao token → a Cloud Function verifies it with Kakao's API → mints a Firebase custom token → `signInWithCustomToken`. Needs Functions + Blaze. The `auth.ts` provider seam and `AuthControl` accommodate a second button later.
 - **SRS (#6)**: now reads/writes multi-device patterns; schema v5 FSRS fields will be added to `Pattern` in that milestone (this migration doesn't touch the shape).
 - **Remote analytics flush**: `FirestoreAnalyticsSink` is the first real remote sink; a PostHog/GA sink could co-exist later.
+- **Unbounded cloud records**: the Firestore adapter intentionally drops the localStorage `MAX_RECORDS=100` cap (§4.3). Over a long-lived account the records collection grows without trim, making `getLearningRecords` / `getUnlearnedScenarios` (full-collection reads) progressively heavier. Acceptable for launch scale; a deferred capacity concern (pagination or a server-side learned-set, likely alongside SRS #6).
 
 ## 10. Provisioning checklist (deferred — account-level, user-run)
 

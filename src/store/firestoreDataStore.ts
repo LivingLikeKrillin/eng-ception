@@ -51,6 +51,10 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
     },
 
     async savePattern(pattern) {
+      // read-then-write is non-atomic, but savePattern fires once per session at step3
+      // (serialized behind the user flow), so concurrent same-key writes don't occur.
+      // We avoid runTransaction deliberately: it needs a server round-trip and rejects
+      // offline, whereas getDoc(cache) + setDoc(increment) queues offline.
       const ref = doc(patternsCol(), patternKey(pattern.patternId, pattern.triggerVerb))
       const existing = await getDoc(ref) // served from cache when offline
       if (existing.exists()) {
@@ -68,7 +72,8 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
       return snap.docs.map((d) => d.data() as Pattern)
     },
     async deletePattern(id) {
-      // interface deletes by Pattern.id (a uuid), not the composite doc key
+      // interface deletes by Pattern.id (a uuid), not the composite doc key, so scan +
+      // match. Bounded by the curated taxonomy (~7 patterns × 17 verbs) and a rare action.
       const snap = await getDocs(patternsCol())
       const match = snap.docs.find((d) => (d.data() as Pattern).id === id)
       if (match) await deleteDoc(match.ref)
