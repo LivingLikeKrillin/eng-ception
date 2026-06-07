@@ -46,7 +46,7 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify(parsed), {
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (error) {
+  } catch {
     return new Response(
       JSON.stringify({ error: 'Failed to process request' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },

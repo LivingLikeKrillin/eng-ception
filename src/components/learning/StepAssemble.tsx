@@ -39,6 +39,19 @@ export default function StepAssemble() {
     [payload],
   )
 
+  // Hooks must run unconditionally — keep this above the early return (rules-of-hooks).
+  const previewText = useMemo(() => {
+    if (!payload || blockOrder.length === 0) return '블록을 눌러서 문장을 만들어봐'
+    const byId = new Map<string, string>(payload.assembly.blocks.map((b) => [b.id, b.en]))
+    const parts = blockOrder.map((id) => byId.get(id) ?? '')
+    if (connectorChoice && blockOrder.length >= 2) {
+      const conn = payload.assembly.connectors.find((c) => c.id === connectorChoice)?.label ?? ''
+      if (conn === '.') return parts.join(' ') + '.'
+      return `${parts[0]} ${parts.slice(1).join(' ')} (${conn})`
+    }
+    return parts.join(' · ')
+  }, [blockOrder, connectorChoice, payload])
+
   if (!payload) return null
 
   // Map block id → role using blockRoles[order-1]
@@ -49,18 +62,6 @@ export default function StepAssemble() {
 
   const blocksComplete = blockOrder.length === 3
   const canAdvance = blocksComplete && connectorChoice !== null
-
-  const previewText = useMemo(() => {
-    if (blockOrder.length === 0) return '블록을 눌러서 문장을 만들어봐'
-    const byId = new Map<string, string>(payload.assembly.blocks.map((b) => [b.id, b.en]))
-    const parts = blockOrder.map((id) => byId.get(id) ?? '')
-    if (connectorChoice && blockOrder.length >= 2) {
-      const conn = payload.assembly.connectors.find((c) => c.id === connectorChoice)?.label ?? ''
-      if (conn === '.') return parts.join(' ') + '.'
-      return `${parts[0]} ${parts.slice(1).join(' ')} (${conn})`
-    }
-    return parts.join(' · ')
-  }, [blockOrder, connectorChoice, payload])
 
   return (
     <div className="space-y-6 fu">
