@@ -11,7 +11,8 @@
     "dev:api": "node --env-file=.env.local dev-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:emulator": "cross-env FIREBASE_EMULATOR=1 firebase emulators:exec --only auth,firestore --project demo-eng-ception \"vitest run src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts\""
   },
   "dependencies": {
     "express": "^5.2.1",
