@@ -1,69 +1,301 @@
-import type { ChatStep, StepResponseMap } from '../types'
+import type { SessionPayload } from '../types/v9'
 
 /**
  * Static fixtures for design-review / offline iteration.
  * Toggled via VITE_USE_MOCK=true in .env.local — bypasses /api/chat entirely.
- * Content is intentionally rich and realistic so every UI surface (pull-quote
- * lead, list rows, ladder variants, pattern cards) has representative data.
+ *
+ * Three fixtures cover the most-likely-to-surface speaking patterns and the
+ * three otherwise-underrepresented ones (spec §7). Selected deterministically
+ * by a length-based hash so the same input always yields the same fixture.
  */
-
-const mockRestructure: StepResponseMap['restructure'] = {
-  whyHard:
-    "이 문장은 '부정' → '한정' → '감정 전달'이라는 세 층이 한 번에 쌓여 있어요. 한국어는 '~는 건 아닌데'로 앞부분을 완곡하게 닫고 바로 감정을 내놓지만, 영어는 이런 중첩을 한 문장에 담기보다 두 문장으로 분리하는 편이 훨씬 자연스럽습니다.",
-  restructured: [
-    '네가 틀렸다는 뜻은 아니야.',
-    '그냥 그 말이 나한테는 조금 아프게 들렸어.',
-  ],
-  feedback:
-    '사용자가 쓴 재구성은 방향이 맞아요. "틀렸다는 말이 아니다"를 먼저 분리해낸 판단이 좋았고, 뒤에 감정만 담는 구조도 영어로 옮기기 쉬운 형태입니다.',
-  hints: [
-    "첫 문장은 'I\\'m not saying...'로 시작하는 게 가장 안전해요.",
-    '두 번째 문장은 감정을 주어가 아닌 상황 탓으로 돌리는 게 덜 공격적입니다.',
-  ],
+export function mockSessionPayload(korean: string): Promise<SessionPayload> {
+  const idx = hashIndex(korean, FIXTURES.length)
+  const fixture = FIXTURES[idx]
+  return new Promise((resolve) => setTimeout(() => resolve(fixture), 600))
 }
 
-const mockEnglish: StepResponseMap['english'] = {
-  english: {
-    safe: "I'm not saying you're wrong. But that hurt a little.",
-    natural:
-      "I'm not trying to say you're wrong — I just felt a bit hurt by what you said.",
-    refined:
-      "I don't mean to say you're wrong. It's just that what you said stung a little.",
+function hashIndex(s: string, mod: number): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return Math.abs(h) % mod
+}
+
+const FIX_CAUSATIVE_BARE: SessionPayload = {
+  structureType: { id: 'cause-result', label: '원인 + 결과', category: '감정/관계' },
+  pattern5h: {
+    id: 'causative-bare',
+    label: '사역 (make/have/let)',
+    verbs: ['make', 'have', 'let'],
+    structure: '주어 + 동사 + 목적어 + 동사원형/형용사',
+    triggerVerb: 'make',
   },
-  feedback:
-    "세 단계 모두 '공격하지 않으면서 감정을 전달한다'는 원래 의도를 지키고 있어요. Safe는 말문이 막혔을 때 바로 꺼낼 수 있는 최소 단위, Natural은 실제 대화에서 가장 자주 쓰이는 형태, Refined는 글로 쓸 때 더 어른스러운 톤이 납니다.",
-}
-
-const mockPattern: StepResponseMap['pattern'] = {
-  patterns: [
-    {
-      template: "I'm not saying A. I just felt B.",
-      category: '감정/관계',
-      tags: ['완곡', '감정 전달'],
-      exampleOriginal: '네가 틀렸다고 말하려는 건 아닌데, 그 말은 좀 서운했어.',
-      exampleEnglish:
-        "I'm not saying you're wrong. I just felt a little hurt by that.",
+  empathy: {
+    echo: '그가 화내게 만들었어...',
+    message: '말 한마디로 분위기 확 바뀌었지',
+  },
+  precheck: {
+    question: '이걸 영어로 말한다면 뭐부터 꺼낼 것 같아?',
+    choices: [
+      { id: 'first', label: '내가 한 일부터', preview: '내가 뭔가 해서…' },
+      { id: 'second', label: '그의 반응부터', preview: '그가 화났어…' },
+    ],
+    correctChoiceId: 'first',
+  },
+  structure: {
+    parts: [
+      { text: '그가 ', role: 'second' },
+      { text: '화내게 ', role: 'pivot' },
+      { text: '만들었어', role: 'first' },
+    ],
+    coreStructure: ['주체', '대상', '결과'],
+    explanation: "한국어는 '그가' 먼저 나오지만, 영어에선 '내가 만들었다'가 앞으로 와.",
+    comparison: {
+      show: true,
+      label: '왜 5형식이 자연스러운가',
+      sansPattern: {
+        en: 'I caused his anger.',
+        whyAwkward: "한국어를 단어 단위로 옮기면 이렇게 돼. 사건과 결과가 분리돼서 어색해.",
+      },
+      withPattern: {
+        en: 'I made him angry.',
+        whyNatural: "사역동사 'make'로 사건과 결과를 한 문장에 평평하게. 영어가 좋아하는 구조.",
+      },
     },
-    {
-      template: "I don't mean to A. It's just that B.",
-      category: '감정/관계',
-      tags: ['해명', '부드러운 반박'],
-      exampleOriginal: '반대하려는 건 아니고, 지금은 좀 부담스러워서 그래.',
-      exampleEnglish:
-        "I don't mean to push back. It's just that I'm feeling a bit overwhelmed right now.",
+    patternQuiz: {
+      question: '이 문장에서 5형식 트리거 동사는?',
+      options: [
+        { id: 'a', text: 'made', hint: '~를 ~하게 만들다 (5형식 사역)', isCorrect: true },
+        { id: 'b', text: 'caused', hint: '~를 야기시키다 (3형식)', isCorrect: false },
+        { id: 'unsure', text: '잘 모르겠어', hint: '', isCorrect: false },
+      ],
+      feedback: "'made'야. make + 목적어 + 형용사로 결과를 직접 붙여.",
     },
-  ],
+  },
+  assembly: {
+    blocks: [
+      { id: 'b1', en: 'I', order: 1 },
+      { id: 'b2', en: 'made him', order: 2 },
+      { id: 'b3', en: 'angry', order: 3 },
+    ],
+    blockRoles: ['subject', 'verb', 'complement'],
+    connectors: [
+      { id: 'period', label: '.', meaning: '한 문장으로 마무리', isCorrect: true },
+      { id: 'so', label: 'so', meaning: '결과 강조용', isCorrect: false },
+    ],
+    finalSentence: 'I made him angry.',
+  },
+  feedback: {
+    correctTitle: '맞았어',
+    correctSub: '주어+사역동사+목적어+형용사 — 5형식 그대로',
+    wrongTitle: '아쉬워',
+    wrongSub: '여기는 made가 주인공이야',
+    explanation: "'made + him + angry' 세 덩어리로 결과까지 한 번에. 'caused his anger'는 문법은 맞지만 영어 화자가 잘 안 써.",
+    wordOrder: {
+      korean: [
+        { label: '그가', role: 'second' },
+        { label: '화내게', role: 'pivot' },
+        { label: '만들었어', role: 'first' },
+      ],
+      english: [
+        { label: 'I', role: 'first' },
+        { label: 'made', role: 'pivot' },
+        { label: 'him angry', role: 'second' },
+      ],
+      reversed: true,
+      keyInsight: "한국어는 '그가 → 결과' 순, 영어는 '내가 → made him → angry'. 사역동사가 어순까지 뒤집어.",
+    },
+    patternNote: "이 문장에서 핵심은 'made + 목적어 + 형용사'. '~를 ~하게 만들었다' 의미면 이 틀부터 떠올려.",
+  },
+  pattern: {
+    template: 'I made him ~',
+    patternId: 'causative-bare',
+    tags: ['감정 표현', '사역', '결과 만들기'],
+  },
 }
 
-const FIXTURES: StepResponseMap = {
-  restructure: mockRestructure,
-  english: mockEnglish,
-  pattern: mockPattern,
+const FIX_PERCEPTION: SessionPayload = {
+  structureType: { id: 'observation', label: '목격 + 묘사', category: '경험/서사' },
+  pattern5h: {
+    id: 'perception',
+    label: '지각동사',
+    verbs: ['see', 'hear', 'watch'],
+    structure: '주어 + 지각동사 + 목적어 + 동사원형/V-ing',
+    triggerVerb: 'see',
+  },
+  empathy: {
+    echo: '그녀가 우는 걸 봤어...',
+    message: '말로 표현하기 묘한 장면이지',
+  },
+  precheck: {
+    question: '이걸 영어로 말한다면 뭐부터 꺼낼 것 같아?',
+    choices: [
+      { id: 'first', label: '내가 봤다는 사실', preview: 'I saw…' },
+      { id: 'second', label: '그녀의 행동', preview: 'She was crying…' },
+    ],
+    correctChoiceId: 'first',
+  },
+  structure: {
+    parts: [
+      { text: '그녀가 ', role: 'second' },
+      { text: '우는 걸 ', role: 'pivot' },
+      { text: '봤어', role: 'first' },
+    ],
+    coreStructure: ['주체', '장면', '관찰'],
+    explanation: "한국어는 '우는 걸 봤어'로 명사화하지만 영어는 'saw her cry'로 동사를 그대로.",
+    comparison: {
+      show: true,
+      label: '왜 5형식이 자연스러운가',
+      sansPattern: {
+        en: 'I saw that she was crying.',
+        whyAwkward: 'that절은 문어체. 회화에선 무겁고 늘어져.',
+      },
+      withPattern: {
+        en: 'I saw her cry.',
+        whyNatural: '지각동사+목적어+동사원형. 장면을 한 호흡에 담는 영어식 압축.',
+      },
+    },
+    patternQuiz: {
+      question: '이 문장에서 5형식 트리거 동사는?',
+      options: [
+        { id: 'a', text: 'saw', hint: '지각동사 — 다음에 목적어+동사원형', isCorrect: true },
+        { id: 'b', text: 'looked', hint: 'look은 자동사라 다른 패턴', isCorrect: false },
+        { id: 'unsure', text: '잘 모르겠어', hint: '', isCorrect: false },
+      ],
+      feedback: "'saw'야. see/hear/watch는 다음에 'her cry' 같은 덩어리를 그대로 받아.",
+    },
+  },
+  assembly: {
+    blocks: [
+      { id: 'b1', en: 'I', order: 1 },
+      { id: 'b2', en: 'saw her', order: 2 },
+      { id: 'b3', en: 'cry', order: 3 },
+    ],
+    blockRoles: ['subject', 'verb', 'complement'],
+    connectors: [
+      { id: 'period', label: '.', meaning: '문장 종결', isCorrect: true },
+      { id: 'and', label: 'and', meaning: '뒤에 묘사 추가용', isCorrect: false },
+    ],
+    finalSentence: 'I saw her cry.',
+  },
+  feedback: {
+    correctTitle: '맞았어',
+    correctSub: 'saw + 목적어 + 동사원형 — 지각동사 5형식 그대로',
+    wrongTitle: '아쉬워',
+    wrongSub: '여기서는 cry를 동사 그대로 쓰는 게 핵심',
+    explanation: "지각동사 see/hear/watch는 뒤에 '목적어 + 동사원형'을 그대로 받아. 'cry'를 'crying'으로 바꾸면 진행 중 장면을 강조하는 뉘앙스가 더해져.",
+    wordOrder: {
+      korean: [
+        { label: '그녀가', role: 'second' },
+        { label: '우는 걸', role: 'pivot' },
+        { label: '봤어', role: 'first' },
+      ],
+      english: [
+        { label: 'I', role: 'first' },
+        { label: 'saw', role: 'pivot' },
+        { label: 'her cry', role: 'second' },
+      ],
+      reversed: true,
+      keyInsight: '한국어는 본 행위가 맨 뒤, 영어는 본 행위(saw)가 앞. 지각동사가 어순을 뒤집어.',
+    },
+    patternNote: "지각동사 saw/heard/watched + 목적어 + 동사원형. '~가 ~하는 걸 봤어' 의미면 이 틀.",
+  },
+  pattern: {
+    template: 'I saw ~ cry',
+    patternId: 'perception',
+    tags: ['목격', '장면 묘사'],
+  },
 }
 
-export async function callClaudeMock<T extends ChatStep>(
-  step: T,
-): Promise<StepResponseMap[T]> {
-  await new Promise((r) => setTimeout(r, 600))
-  return FIXTURES[step] as StepResponseMap[T]
+const FIX_DITRANSITIVE: SessionPayload = {
+  structureType: { id: 'request-direct', label: '직접 부탁', category: '상황 대응' },
+  pattern5h: {
+    id: 'ditransitive',
+    label: '수여동사 (4형식)',
+    verbs: ['give', 'tell', 'show', 'send', 'bring'],
+    structure: '주어 + 동사 + 간접목적어 + 직접목적어',
+    triggerVerb: 'tell',
+  },
+  empathy: {
+    echo: '그 사실을 알려줘...',
+    message: '솔직히 듣고 싶을 때가 있지',
+  },
+  precheck: {
+    question: '이걸 영어로 말한다면 뭐부터 꺼낼 것 같아?',
+    choices: [
+      { id: 'first', label: '동사부터', preview: 'Tell me…' },
+      { id: 'second', label: '대상부터', preview: 'The truth…' },
+    ],
+    correctChoiceId: 'first',
+  },
+  structure: {
+    parts: [
+      { text: '그 사실을 ', role: 'second' },
+      { text: '알려', role: 'pivot' },
+      { text: '줘', role: 'first' },
+    ],
+    coreStructure: ['청자', '내용', '요청'],
+    explanation: "한국어는 '~을 ~해 줘'로 끝나지만, 영어는 'tell me the truth'처럼 동사부터 간접목적어, 직접목적어.",
+    comparison: {
+      show: true,
+      label: '왜 4형식(수여동사)이 자연스러운가',
+      sansPattern: {
+        en: 'Give the truth to me.',
+        whyAwkward: '문법은 맞지만, 일상 영어에선 더 짧은 4형식이 압도적으로 자연스러워.',
+      },
+      withPattern: {
+        en: 'Tell me the truth.',
+        whyNatural: "수여동사 + 간접목적어(me) + 직접목적어(the truth). 두 목적어를 그대로 붙여.",
+      },
+    },
+    patternQuiz: {
+      question: '이 문장에서 4형식 동사로 가장 자연스러운 건?',
+      options: [
+        { id: 'a', text: 'tell', hint: '사람에게 직접 말해주는 동사 (4형식)', isCorrect: true },
+        { id: 'b', text: 'say', hint: 'say는 4형식으로 안 써', isCorrect: false },
+        { id: 'unsure', text: '잘 모르겠어', hint: '', isCorrect: false },
+      ],
+      feedback: "'tell'이야. say/tell이 헷갈리는데, 'say'는 사람을 직접 받지 못해.",
+    },
+  },
+  assembly: {
+    blocks: [
+      { id: 'b1', en: 'Tell', order: 1 },
+      { id: 'b2', en: 'me', order: 2 },
+      { id: 'b3', en: 'the truth', order: 3 },
+    ],
+    blockRoles: ['verb', 'object', 'object'],   // 4형식: IO(me)+DO(the truth) 모두 목적어 — BlockRole 에 IO/DO 구분 없음
+    connectors: [
+      { id: 'period', label: '.', meaning: '명령문 종결', isCorrect: true },
+      { id: 'please', label: 'please', meaning: '예의 톤', isCorrect: false },
+    ],
+    finalSentence: 'Tell me the truth.',
+  },
+  feedback: {
+    correctTitle: '맞았어',
+    correctSub: 'tell + me + the truth — 4형식 그대로',
+    wrongTitle: '아쉬워',
+    wrongSub: '여기는 두 목적어를 그대로 붙이는 게 자연',
+    explanation: '4형식 (수여동사) 패턴은 to/for 없이 사람과 내용을 차례로 붙여. give me a chance, send me a message — 같은 틀.',
+    wordOrder: {
+      korean: [
+        { label: '그 사실을', role: 'second' },
+        { label: '알려줘', role: 'first' },
+      ],
+      english: [
+        { label: 'Tell', role: 'first' },
+        { label: 'me', role: 'pivot' },
+        { label: 'the truth', role: 'second' },
+      ],
+      reversed: true,
+      keyInsight: '한국어는 내용 → 동사, 영어는 동사 → 사람 → 내용. 4형식 동사가 두 목적어를 끌고 와.',
+    },
+    patternNote: "수여동사 tell/give/show + 사람 + 내용. '~에게 ~을 ~해 줘' 의미면 이 틀.",
+  },
+  pattern: {
+    template: 'Tell me ~',
+    patternId: 'ditransitive',
+    tags: ['부탁', '솔직 요청'],
+  },
 }
+
+const FIXTURES: SessionPayload[] = [FIX_CAUSATIVE_BARE, FIX_PERCEPTION, FIX_DITRANSITIVE]
