@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useLearningStore } from './learningStore'
+import { useLearningStore, isAssemblyCorrect } from './learningStore'
+import { fetchSessionPayload } from '../services/claude'
 import type { Scenario } from '../types'
 
 vi.mock('../services/claude', () => ({
@@ -38,6 +39,9 @@ const sampleScenario: Scenario = {
 }
 
 beforeEach(() => {
+  // Reset spy/mock call histories between tests (spies are re-created per test and
+  // would otherwise accumulate counts). Clears history only — keeps the factory impl.
+  vi.clearAllMocks()
   useLearningStore.getState().reset()
 })
 
@@ -190,5 +194,128 @@ describe('learningStore complete()', () => {
     expect(record.triggerVerb).toBeDefined()
     expect(record.patternQuizCorrect).toBe(true)
     expect(record.patternQuizUnsure).toBe(false)
+  })
+})
+
+// Production-correctness signal. Order/connector are derived from the payload so the
+// assertions hold regardless of which fixture hashIndex selects.
+describe('learningStore isAssemblyCorrect', () => {
+  beforeEach(async () => {
+    useLearningStore.getState().reset()
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+  })
+
+  const correctOrder = () => {
+    const { payload } = useLearningStore.getState()
+    return [...payload!.assembly.blocks].sort((a, b) => a.order - b.order).map((b) => b.id)
+  }
+  const correctConnector = () =>
+    useLearningStore.getState().payload!.assembly.connectors.find((c) => c.isCorrect)!.id
+  const wrongConnector = () =>
+    useLearningStore.getState().payload!.assembly.connectors.find((c) => !c.isCorrect)!.id
+
+  it('is true for the right block order + right connector', () => {
+    useLearningStore.setState({ blockOrder: correctOrder(), connectorChoice: correctConnector() })
+    expect(isAssemblyCorrect(useLearningStore.getState())).toBe(true)
+  })
+
+  it('is false when the block order is reversed', () => {
+    useLearningStore.setState({
+      blockOrder: [...correctOrder()].reverse(),
+      connectorChoice: correctConnector(),
+    })
+    expect(isAssemblyCorrect(useLearningStore.getState())).toBe(false)
+  })
+
+  it('is false when the connector is wrong', () => {
+    useLearningStore.setState({ blockOrder: correctOrder(), connectorChoice: wrongConnector() })
+    expect(isAssemblyCorrect(useLearningStore.getState())).toBe(false)
+  })
+
+  it('is false when fewer than 3 blocks are placed', () => {
+    useLearningStore.setState({
+      blockOrder: correctOrder().slice(0, 2),
+      connectorChoice: correctConnector(),
+    })
+    expect(isAssemblyCorrect(useLearningStore.getState())).toBe(false)
+  })
+})
+
+// End-to-end: drive the natural 7-step chain and assert BOTH persisted artifacts.
+describe('learningStore end-to-end walkthrough', () => {
+  it('persists a deduped pattern + a v4 record with assemblyCorrect=true', async () => {
+    const localStorage = await import('./localStorage')
+    const patternSpy = vi.spyOn(localStorage.localStorageAdapter, 'savePattern')
+    const recordSpy = vi.spyOn(localStorage.localStorageAdapter, 'saveLearningRecord')
+
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+
+    const payload = useLearningStore.getState().payload!
+    const correctOrder = [...payload.assembly.blocks]
+      .sort((a, b) => a.order - b.order)
+      .map((b) => b.id)
+    const correctConn = payload.assembly.connectors.find((c) => c.isCorrect)!.id
+
+    useLearningStore.getState().advanceFromEmpathy()
+    useLearningStore.getState().submitPrecheck('first')
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().currentStep).toBe('step0')
+    })
+    useLearningStore.getState().submitPatternQuiz({ correct: true, unsure: false })
+    useLearningStore.getState().advanceToStep1()
+    correctOrder.forEach((id) => useLearningStore.getState().tapBlock(id))
+    useLearningStore.getState().tapConnector(correctConn)
+    useLearningStore.getState().advanceToStep2()
+    await useLearningStore.getState().advanceToStep3()
+    useLearningStore.getState().submitAfterChoice('first')
+    useLearningStore.getState().advanceToStep4()
+    await useLearningStore.getState().complete()
+
+    expect(patternSpy).toHaveBeenCalledTimes(1)
+    const pattern = patternSpy.mock.calls[0][0]
+    expect(pattern.patternId).toBe(payload.pattern.patternId)
+    expect(pattern.triggerVerb).toBe(payload.pattern5h.triggerVerb)
+    expect(pattern.exampleEnglish).toBe(payload.assembly.finalSentence)
+
+    expect(recordSpy).toHaveBeenCalledTimes(1)
+    const record = recordSpy.mock.calls[0][0]
+    expect(record.schemaVersion).toBe(4)
+    expect(record.pattern5hId).toBe(payload.pattern5h.id)
+    expect(record.assemblyCorrect).toBe(true)
+    expect(record.patternQuizCorrect).toBe(true)
+  })
+})
+
+// 7.3 error path: a failed fetch surfaces a Korean error; retry recovers.
+describe('learningStore error path', () => {
+  it('sets error status on fetch failure and recovers on retryFetch', async () => {
+    // Earlier tests fire startScenario without awaiting; their runFetch (600ms mock delay)
+    // can resolve mid-test and clobber our 'error' with a stray 'ready'. Drain + reset so
+    // only our rejecting fetch is in flight.
+    await new Promise((r) => setTimeout(r, 700))
+    useLearningStore.getState().reset()
+
+    vi.mocked(fetchSessionPayload).mockRejectedValueOnce(new Error('network down'))
+
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('error')
+    })
+    expect(useLearningStore.getState().error).toBe('네트워크가 불안정해요.')
+
+    // mockRejectedValueOnce is consumed; the default mock resolves on retry.
+    useLearningStore.getState().retryFetch()
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    expect(useLearningStore.getState().error).toBeNull()
+    expect(useLearningStore.getState().payload).not.toBeNull()
   })
 })
