@@ -13,7 +13,6 @@ class MemStorage {
 }
 
 beforeEach(() => {
-  // @ts-expect-error test shim
   globalThis.localStorage = new MemStorage()
   // Node 22 provides a read-only global crypto with randomUUID — no shim needed.
 })
