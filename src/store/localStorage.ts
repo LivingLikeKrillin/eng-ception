@@ -1,6 +1,9 @@
 import type { DataStore } from './dataStore'
 import type { Scenario, LearningRecord, Pattern } from '../types'
 
+const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
+const CURRENT_SCHEMA_VERSION = 4
+
 const KEYS = {
   scenarios: 'eng-ception:scenarios',
   records: 'eng-ception:records',
@@ -19,6 +22,15 @@ function setItem<T>(key: string, data: T[]): void {
 }
 
 export const localStorageAdapter: DataStore = {
+  async init() {
+    const stored = localStorage.getItem(SCHEMA_VERSION_KEY)
+    if (stored !== String(CURRENT_SCHEMA_VERSION)) {
+      localStorage.removeItem('eng-ception:records')
+      localStorage.removeItem('eng-ception:patterns')
+      localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
+    }
+  },
+
   async getScenarios() {
     return getItem<Scenario>(KEYS.scenarios)
   },
@@ -62,6 +74,15 @@ export const localStorageAdapter: DataStore = {
 
   async savePattern(pattern) {
     const patterns = getItem<Pattern>(KEYS.patterns)
+    const existing = patterns.find(
+      (p) => p.patternId === pattern.patternId && p.triggerVerb === pattern.triggerVerb,
+    )
+    if (existing) {
+      existing.reviewCount += 1
+      existing.lastReviewedAt = new Date().toISOString()
+      setItem(KEYS.patterns, patterns)
+      return
+    }
     patterns.push(pattern)
     setItem(KEYS.patterns, patterns)
   },

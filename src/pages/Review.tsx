@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { localStorageAdapter as db } from '../store/localStorage'
 import type { LearningRecord, Pattern } from '../types'
+import type { Pattern5HId } from '../types/v9'
+
+const PATTERN_LABEL: Record<Pattern5HId, string> = {
+  'causative-bare':   '사역',
+  'causative-toV':    '사역(get+toV)',
+  'causative-result': '사역 결과',
+  'perception':       '지각',
+  'want-toV':         '요청/희망',
+  'judgment':         '판단',
+  'ditransitive':     '수여',
+}
 
 export default function Review() {
   const [records, setRecords] = useState<LearningRecord[]>([])
@@ -60,6 +71,9 @@ export default function Review() {
                   className="bg-c border border-line rounded-[14px] px-4 py-3 space-y-2"
                 >
                   <p className="text-sm text-t2 leading-relaxed">{r.originalKorean}</p>
+                  <span className="inline-block text-[11px] font-medium text-accent bg-accent/[0.08] px-2 py-0.5 rounded">
+                    {PATTERN_LABEL[r.pattern5hId]} · <span className="font-en">{r.triggerVerb}</span>
+                  </span>
                   <div className="flex justify-between items-center">
                     <p className="text-[11px] text-t3 font-en">
                       {new Date(r.completedAt).toLocaleDateString('ko-KR')}

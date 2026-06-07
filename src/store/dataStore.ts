@@ -1,6 +1,7 @@
 import type { Scenario, LearningRecord, Pattern } from '../types'
 
 export interface DataStore {
+  init(): Promise<void>
   getScenarios(): Promise<Scenario[]>
   getScenario(id: string): Promise<Scenario | null>
   getUnlearnedScenarios(limit: number): Promise<Scenario[]>

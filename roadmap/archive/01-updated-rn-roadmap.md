@@ -1,5 +1,7 @@
 # Eng-ception React Native 개발 로드맵 (업데이트)
 
+> **⛔ SUPERSEDED (2026-06-07).** 현재 방향과 어긋남: **웹 PWA가 제품, RN 보류** (RN 핵심 근거였던 듣기 오디오 정밀도 → 듣기 드롭). 듣기 모드·TTS·음성녹음·4탭 등 RN/듣기 전제 항목은 무효. 현재 소스-오브-트루스: `docs/superpowers/specs/2026-05-08-v9-5h-axis-design.md` + 메모리 `scope_speaking_only`. 역사 기록용으로만 보존.
+
 > **기술 스택:** React Native (Expo) + Firebase + Claude API  
 > **개발 체제:** 1인 풀스택  
 > **디자인 방향:** 스픽 + Linear 벤치마킹 (다크 기반, 절제된 액센트)  
