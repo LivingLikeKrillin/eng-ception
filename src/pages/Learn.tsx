@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLearningStore } from '../store/learningStore'
-import { localStorageAdapter as db } from '../store/localStorage'
+import { db } from '../store/db'
 import LearningFlow from '../components/learning/LearningFlow'
 
 export default function Learn() {

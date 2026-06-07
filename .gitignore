@@ -32,6 +32,12 @@ blob-report/
 *.sln
 *.sw?
 
+# Firebase emulator artifacts
+.firebase/
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+
 # Logs
 logs
 *.log

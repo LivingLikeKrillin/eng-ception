@@ -11,10 +11,12 @@
     "dev:api": "node --env-file=.env.local dev-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:emulator": "firebase emulators:exec --only auth,firestore --project demo-eng-ception \"vitest run --no-file-parallelism src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts src/services/migrateToCloud.emulator.test.ts\""
   },
   "dependencies": {
     "express": "^5.2.1",
+    "firebase": "^12.14.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.10",
@@ -30,6 +33,7 @@
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
+    "firebase-tools": "^15.19.1",
     "globals": "^15.15.0",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",

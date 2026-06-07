@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { localStorageAdapter as db } from '../store/localStorage'
+import { db } from '../store/db'
 import type { Pattern } from '../types'
 import type { Pattern5HId } from '../types/v9'
 

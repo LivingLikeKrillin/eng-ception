@@ -53,12 +53,18 @@ eng-ception/
 │   │   ├── validate.ts           # assertSessionPayload — 런타임 스키마 검증 (실응답 가드)
 │   │   ├── mocks.ts              # mockSessionPayload — VITE_USE_MOCK=true 시 사용
 │   │   ├── analytics.ts          # track() 파사드 — swappable AnalyticsSink + dev egress
-│   │   └── analyticsLifecycle.ts # visibilitychange → session_abandon(hidden)
+│   │   ├── analyticsLifecycle.ts # visibilitychange → session_abandon(hidden)
+│   │   ├── firebase.ts           # Firebase 단일 init + isFirebaseConfigured() 게이트 + 에뮬레이터 연결
+│   │   └── migrateToCloud.ts     # 로그인 시 로컬→Firestore 비파괴 union 병합 + 조건부 로컬 클리어
 │   ├── store/
-│   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화 — Firestore 어댑터 슬롯인 지점)
+│   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화)
+│   │   ├── db.ts                 # 스왑 가능한 db 파사드 + setDbAdapter (setSink 평행; 7 소비자가 import)
 │   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v4, patternId+triggerVerb dedup)
+│   │   ├── firestoreDataStore.ts # createFirestoreDataStore(fs,uid) — Firestore 어댑터 (offline-safe dedup)
 │   │   ├── analyticsSink.ts      # AnalyticsSink 인터페이스 + noop + MemoryAnalyticsSink
 │   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (eng-ception:events)
+│   │   ├── firestoreAnalyticsSink.ts # createFirestoreAnalyticsSink(fs,uid) — Firestore 텔레메트리 sink
+│   │   ├── auth.ts               # 구글 로그인 + 어댑터/sink 스왑 reaction의 단일 소유자
 │   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect + 이벤트 계측
 │   ├── pages/
 │   │   ├── Home.tsx              # 홈 (빠른 입력 + 시나리오 + 최근 학습)
@@ -68,7 +74,8 @@ eng-ception/
 │   └── components/
 │       ├── common/
 │       │   ├── Navigation.tsx    # 하단 탭 네비게이션
-│       │   └── ProgressBar.tsx   # step0~step4 진행률 표시
+│       │   ├── ProgressBar.tsx   # step0~step4 진행률 표시
+│       │   └── AuthControl.tsx   # 구글 로그인/로그아웃 (미설정 시 null 렌더; Home 헤더)
 │       ├── home/
 │       │   ├── ScenarioCard.tsx
 │       │   └── RecentLearning.tsx
@@ -90,6 +97,9 @@ eng-ception/
 │               ├── WordOrderCompare.tsx
 │               └── PatternNoteCard.tsx
 ├── dev-server.js                 # 로컬 개발용 Express API 프록시 (model claude-sonnet-4-6)
+├── firebase.json                 # 에뮬레이터 설정 (auth 9099 / firestore 8080) + rules 포인터
+├── .firebaserc                   # 기본 프로젝트 demo-eng-ception (demo- 접두사 → 실 클라우드 불필요)
+├── firestore.rules               # 보안 규칙 — /users/{uid}/** 본인만 read/write
 ├── playwright.config.ts          # e2e — vite strict port 5219, mock 모드
 ├── vite.config.ts                # Vite + PWA + Tailwind 설정
 └── tsconfig.json                 # 루트는 files:[]+references (→ `tsc -b` 로 빌드, `--noEmit` 아님)
@@ -182,6 +192,17 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 
 세션의 **행동·시간 레이어**를 포착 — `LearningRecord`(완료 시에만 저장)가 못 보는 이탈 세션/단계별 시간/fetch 지연. `services/analytics.ts`의 `track(name, props, sessionId)` 파사드가 content-free `AnalyticsEvent`를 swappable `AnalyticsSink`로 보냄. 기본 sink는 noop; `main.tsx`가 `localAnalyticsSink`(localStorage 링버퍼, `eng-ception:events`, 자체 version key, MAX 1000 회전)를 주입 (`VITE_DISABLE_ANALYTICS=true`면 비활성, noop 유지). 계측은 `learningStore`에 집중 — `transitionTo`(단계별 dwell), 타임드 `runFetch`(fetch_start/success/error + `classifyError` kind), `complete`(session_complete), 공개 `abandonIfActive(reason)`(reset/restart + `visibilitychange` 리스너로 탭 종료 drop-off; `sessionEnded` 가드로 중복 방지). 7종 이벤트: `session_start`/`session_complete`/`session_abandon`/`step_dwell`/`fetch_start`/`fetch_success`/`fetch_error`. 이벤트는 PIPA-safe (raw 한국어/영어 없음 — id/pattern/bool/타이밍만). dev에서 `window.__engEvents()`(=globalThis)로 확인. Firebase/PostHog sink는 동일 `AnalyticsSink` 인터페이스로 나중 슬롯인 (DataStore 평행). 설계: `docs/superpowers/specs/2026-06-07-event-tracking-design.md`.
 
+## Firebase (cloud tier) — 선택적 클라우드 동기화
+
+**local-first + 선택적 구글 로그인.** 로그아웃/미설정 → `localStorage`, 로그인 → Firestore. `isFirebaseConfigured()`(`services/firebase.ts`) 런타임 게이트: `VITE_FIREBASE_*` 없으면 Firebase 초기화·로그인 UI 전부 비활성 → **현재 로컬 동작 그대로 보존** (기존 80→89 테스트·e2e 무손상).
+
+- **스왑 seam:** `store/db.ts`의 `db` 파사드 + `setDbAdapter()` — `services/analytics.ts`의 `setSink()`와 정확히 평행. 7개 소비자(learningStore·Home·Learn·Patterns·Review·RecentLearning·main)는 `db`만 import; auth 상태가 한 곳에서 어댑터를 교체.
+- **어댑터:** `createFirestoreDataStore(fs, uid)` / `createFirestoreAnalyticsSink(fs, uid)` 팩토리 (Firestore+uid 주입 → 테스트는 에뮬레이터 인스턴스 주입). 시나리오는 번들 seed라 Firestore에 저장 안 함; records `/users/{uid}/records/{id}`, patterns `/users/{uid}/patterns/{patternId__triggerVerb}` (복합키=doc id). **패턴 dedup = `setDoc`+`increment(1)` (offline 큐잉됨; `runTransaction` 아님 — 서버 왕복이라 오프라인서 실패).** `MAX_RECORDS` 캡 없음(클라우드는 전량 보관).
+- **로그인 병합:** `services/migrateToCloud.ts` — 로컬 records/patterns를 비파괴 union으로 클라우드에 올리고, **모든 쓰기 성공 시에만** 로컬 클리어 (실패 시 로컬 보존, 손실 없음). 이벤트는 마이그레이션 안 함(content-free 일회성).
+- **auth:** `store/auth.ts`가 스왑의 단일 소유자 — `registerAuthReaction()`(부트스트랩, 설정 시에만), `signInWithGoogle/signOutUser/onUserChanged`. `migratedUid` 가드(토큰 갱신 중복 방지), merge 실패 시 스왑 안 함+로그. **`VITE_DISABLE_ANALYTICS` 존중: setSink만 게이트, `setDbAdapter`는 무조건** (데이터는 항상 동기화, 텔레메트리만 비활성). UI: `components/common/AuthControl.tsx`(미설정 시 null 렌더, 실패한 로그인 표시).
+- **보안 규칙:** `firestore.rules` — `/users/{uid}/**` 본인만 read/write. **에뮬레이터 우선 개발:** `firebase.json`/`.firebaserc`(demo-eng-ception, 실 클라우드 불필요). `npm run test:emulator`(Java 필요)는 `firebase emulators:exec`로 자동 기동, 게이트는 `FIRESTORE_EMULATOR_HOST`(exec가 set) — 잘못 돌려도 깨끗이 skip.
+- **phase 2 (이번 범위 밖):** 카카오 로그인(Firebase 네이티브 미지원 → custom-token Cloud Function + Blaze), Cloud Functions 전반, 프로덕션 프로비저닝(체크리스트는 spec §10). 설계: `docs/superpowers/specs/2026-06-07-firebase-migration-design.md`, 계획: `docs/superpowers/plans/2026-06-07-firebase-migration.md`.
+
 ## 개발 컨벤션
 
 - TypeScript strict 모드
@@ -200,26 +221,32 @@ npm run dev:api    # API 프록시 서버 (Express, port 3001, --env-file=.env.l
 npm run build      # 프로덕션 빌드 (tsc -b && vite build)
 npm run lint       # ESLint 실행
 npm run preview    # 빌드 결과 미리보기
-npm run test       # Vitest 단위/통합 (= vitest run, 80 tests)
+npm run test       # Vitest 단위/통합 (= vitest run, 89 tests + 7 emulator-gated skip)
 npm run test:watch # Vitest watch
 npm run test:e2e   # Playwright e2e (mock 모드, vite strict port 5219)
+npm run test:emulator # Firestore 어댑터 + 룰 테스트 (Java 필요; firebase emulators:exec 자동 기동, 7 tests)
 ```
 
 **개발 시:** mock 모드(`VITE_USE_MOCK=true`)면 `npm run dev`만으로 충분. 실 Claude API를 쓰려면 `VITE_USE_MOCK=false` + `npm run dev:api` 동시 실행.
 
-**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (80) · `npm run lint` · `npm run test:e2e`.
+**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (89 pass + 7 emulator-gated skip) · `npm run lint` · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 — 기본 카운트엔 미포함).
 
 ## 환경 변수
 
 ```
-ANTHROPIC_API_KEY=       # Claude API 키 (서버 사이드 — api/chat.ts, dev-server.js 에서만)
-VITE_USE_MOCK=           # 'true' 면 mockSessionPayload 사용 (API 호출 안 함)
-VITE_DISABLE_ANALYTICS=  # 'true' 면 이벤트 트래킹 비활성 (기본 noop sink 유지)
+ANTHROPIC_API_KEY=        # Claude API 키 (서버 사이드 — api/chat.ts, dev-server.js 에서만)
+VITE_USE_MOCK=            # 'true' 면 mockSessionPayload 사용 (API 호출 안 함)
+VITE_DISABLE_ANALYTICS=   # 'true' 면 이벤트 트래킹 비활성 (기본 noop sink 유지)
+VITE_FIREBASE_API_KEY=    # Firebase 웹 config — 셋 다 있어야 isFirebaseConfigured()=true (없으면 순수 로컬 모드)
+VITE_FIREBASE_PROJECT_ID= #   ↑ (apiKey + projectId + appId 가 게이트)
+VITE_FIREBASE_APP_ID=     #   ↑
+VITE_FIREBASE_AUTH_DOMAIN= # 구글 로그인 팝업용 (init엔 선택, 로그인엔 필요)
+VITE_USE_FIREBASE_EMULATOR= # 'true' 면 로컬 에뮬레이터(Auth 9099/Firestore 8080)에 연결 (개발용)
 ```
 
 ## 다음 단계 (미완료)
 
-1. **Firebase 마이그레이션:** Auth(카카오+구글) + Firestore + Cloud Functions로 localStorage 교체. `DataStore` 인터페이스가 이미 추상화돼 있어 Firestore 어댑터가 슬롯인. (최대 마일스톤, 설계 선행 필요)
+1. **Firebase 마이그레이션:** ✅ v1 구현됨 (branch `feat/firebase-migration` — local-first + 선택적 구글 로그인, Firestore 어댑터/sink 슬롯인, 비파괴 병합, 에뮬레이터 테스트). 위 "Firebase (cloud tier)" 섹션 참조. **남은 것:** 프로덕션 프로비저닝(체크리스트 spec §10) + **phase 2 = 카카오 로그인(custom-token Cloud Function + Blaze)**.
 2. **PWA 최적화:** 오프라인 캐싱 + 홈 화면 설치 유도. `vite-plugin-pwa` 이미 연결됨
 3. **이벤트 트래킹:** 세션 시작/완료, 단계별 소요 시간, 이탈 단계
 4. **post-v9 SRS (2-Layer):** 상위 = `Pattern5HId` 롤업, 하위(FSRS core) = `(patternId, triggerVerb)`. dedup 키 이미 존재 → schema v5 마이그레이션으로 FSRS 필드(interval/easeFactor/nextDueAt/bypassedCount) 추가. organic-first + 회피 임계값 N=3 + soft-bias 큐. (설계 선행 필요)

@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { localStorageAdapter as db } from './store/localStorage'
+import { db } from './store/db'
 import { setSink, installDevEgress } from './services/analytics'
 import { localAnalyticsSink } from './store/localAnalyticsSink'
 import { registerAnalyticsLifecycle } from './services/analyticsLifecycle'
+import { isFirebaseConfigured } from './services/firebase'
+import { registerAuthReaction } from './store/auth'
 
 async function bootstrap() {
   await db.init()
@@ -15,6 +17,12 @@ async function bootstrap() {
     setSink(localAnalyticsSink)
     registerAnalyticsLifecycle()
     if (import.meta.env.DEV) installDevEgress()
+  }
+
+  // Cloud tier is additive: only when Firebase is configured. The reaction swaps the
+  // db adapter (and analytics sink) to Firestore once a Google user is present.
+  if (isFirebaseConfigured()) {
+    registerAuthReaction()
   }
 
   createRoot(document.getElementById('root')!).render(
