@@ -6,7 +6,7 @@
 
 **Architecture:** A new switchable `db` facade (parallel to the existing `setSink()`) lets auth state swap the active `DataStore` at runtime: `localStorageAdapter` when logged out / unconfigured, a `FirestoreDataStore` when a Google user signs in. On sign-in, local data is union-merged up to Firestore non-destructively, then the local working store is cleared. Built and tested against the Firebase Local Emulator Suite; real cloud provisioning is a deferred account-level checklist. Kakao/Cloud Functions/Blaze are explicitly phase 2.
 
-**Tech Stack:** React 19 + TS strict, Zustand 5, Vite 6, Vitest 4 (env=`node`), `firebase` (modular web SDK v11), `@firebase/rules-unit-testing` + `firebase-tools` (emulator), `cross-env` (Windows-safe test env).
+**Tech Stack:** React 19 + TS strict, Zustand 5, Vite 6, Vitest 4 (env=`node`), `firebase` (modular web SDK — resolved to v12, API-compatible), `@firebase/rules-unit-testing` + `firebase-tools` (emulator). (The emulator-test gate keys off `FIRESTORE_EMULATOR_HOST` that `firebase emulators:exec` sets — no `cross-env`/hand-set flag needed.)
 
 **Spec:** `docs/superpowers/specs/2026-06-07-firebase-migration-design.md`
 
@@ -48,7 +48,7 @@
 Run:
 ```bash
 npm i firebase
-npm i -D @firebase/rules-unit-testing firebase-tools cross-env
+npm i -D @firebase/rules-unit-testing firebase-tools
 ```
 Expected: installs cleanly on Windows (the old `@rollup/rollup-linux-x64-gnu` hard-dep wart is already gone; no `--force`).
 
@@ -470,7 +470,7 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
 
 - [ ] **Step 2: Write the emulator-gated test** (`src/store/firestoreDataStore.test.ts`)
 
-Gated by `FIREBASE_EMULATOR` so the default `npm test` skips it.
+Gated by `FIRESTORE_EMULATOR_HOST` (set by `firebase emulators:exec`) so the default `npm test` skips it — and an accidental run with no live emulator skips cleanly instead of throwing.
 ```ts
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import {
@@ -482,7 +482,7 @@ import type { Firestore } from 'firebase/firestore'
 import { createFirestoreDataStore } from './firestoreDataStore'
 import type { LearningRecord, Pattern } from '../types'
 
-const RUN = process.env.FIREBASE_EMULATOR === '1'
+const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST) // set by `firebase emulators:exec`
 
 const makeRecord = (over: Partial<LearningRecord> = {}): LearningRecord => ({
   id: 'r1', schemaVersion: 4, scenarioId: 's1', originalKorean: 'x',
@@ -552,19 +552,19 @@ describe.skipIf(!RUN)('FirestoreDataStore (emulator)', () => {
 
 - [ ] **Step 3: Add emulator test script to `package.json`**
 ```json
-"test:emulator": "cross-env FIREBASE_EMULATOR=1 firebase emulators:exec --only auth,firestore --project demo-eng-ception \"vitest run src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts\""
+"test:emulator": "firebase emulators:exec --only auth,firestore --project demo-eng-ception \"vitest run --no-file-parallelism src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts\""
 ```
 
 - [ ] **Step 4: Run default suite (emulator test must SKIP)**
 
 Run: `npx vitest run`
-Expected: green; the FirestoreDataStore describe is skipped (no `FIREBASE_EMULATOR`). Count unchanged from Chunk 2.
+Expected: green; the FirestoreDataStore describe is skipped (no `FIRESTORE_EMULATOR_HOST`). Count unchanged from Chunk 2.
 
 - [ ] **Step 5: Run the FirestoreDataStore emulator tests (requires Java)**
 
 The `test:emulator` script's glob also lists `src/firestore.rules.test.ts`, which doesn't exist until Task 3.2 — so run just this file now to avoid a missing-file error:
 ```bash
-npx cross-env FIREBASE_EMULATOR=1 firebase emulators:exec --only auth,firestore --project demo-eng-ception "vitest run src/store/firestoreDataStore.test.ts"
+npx firebase emulators:exec --only auth,firestore --project demo-eng-ception "vitest run src/store/firestoreDataStore.test.ts"
 ```
 Expected: emulator boots, the 4 FirestoreDataStore tests PASS, emulator shuts down. (The full `npm run test:emulator` — both files — is exercised in Task 3.2 Step 2.)
 
@@ -592,7 +592,7 @@ import {
 import { readFileSync } from 'node:fs'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 
-const RUN = process.env.FIREBASE_EMULATOR === '1'
+const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST) // set by `firebase emulators:exec`
 
 describe.skipIf(!RUN)('firestore security rules', () => {
   let env: RulesTestEnvironment
@@ -1106,7 +1106,7 @@ This exercises the one path no automated test covers: a real sign-in → merge �
 ## Notes for the executor
 
 - **Verify recipe** (this repo): `npx tsc -b` (NOT `--noEmit` — root tsconfig is `files:[]`+references) · `npx vitest run` · `npm run lint` · `npm run test:e2e` · `npm run test:emulator` (needs Java).
-- **vitest env is `node`** — no `window`/`document`/`indexedDB`. Pure-logic tests only by default; Firestore tests are emulator-gated via `FIREBASE_EMULATOR=1` so `npm test` stays fast and green.
+- **vitest env is `node`** — no `window`/`document`/`indexedDB`. Pure-logic tests only by default; Firestore tests are emulator-gated via `FIRESTORE_EMULATOR_HOST` (set by `firebase emulators:exec`) so `npm test` stays fast and green, and a stray run with no live emulator skips cleanly rather than erroring.
 - **Offline-safety** is why pattern dedup uses `setDoc`+`increment` not `runTransaction` (transactions need a server round-trip; they are not queued offline). See spec §4.3.
 - **Non-destructive merge** is the highest-risk piece: `migrateToCloud` clears local only after all cloud writes resolve. Its union/dedup/abort behavior is unit-tested (Task 4.1).
 - **No schema bump** — `LearningRecord`/`Pattern` v4 shapes serialize directly to Firestore docs (ISO-string timestamps kept for adapter symmetry).
