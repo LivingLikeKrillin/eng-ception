@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
+import { track } from '../services/analytics'
 import { localStorageAdapter as db } from './localStorage'
 
 export interface PatternQuizAnswer {
@@ -25,6 +26,12 @@ interface V9LearningState {
   connectorChoice: string | null
   afterChoice: string | null
   patternSaved: boolean
+
+  // event-tracking session state
+  sessionId: string | null
+  sessionStartedAt: number | null
+  stepEnteredAt: number | null
+  sessionEnded: boolean
 
   startScenario: (scenario: Scenario) => void
   startCustom: (korean: string) => void
@@ -59,6 +66,10 @@ const initial = {
   connectorChoice: null as string | null,
   afterChoice: null as string | null,
   patternSaved: false,
+  sessionId: null as string | null,
+  sessionStartedAt: null as number | null,
+  stepEnteredAt: null as number | null,
+  sessionEnded: false,
 }
 
 export type FetchErrorKind = 'timeout' | 'parse' | 'network' | 'unknown'
@@ -84,11 +95,16 @@ function errorToKoreanMessage(e: unknown): string {
 
 export const useLearningStore = create<V9LearningState>((set, get) => {
   const runFetch = async () => {
+    const sessionId = get().sessionId
+    const t0 = Date.now()
+    if (sessionId) track('fetch_start', {}, sessionId)
     try {
       const payload = await fetchSessionPayload(get().originalKorean)
       set({ payload, payloadStatus: 'ready', error: null })
+      if (sessionId) track('fetch_success', { latencyMs: Date.now() - t0 }, sessionId)
     } catch (e) {
       set({ payloadStatus: 'error', error: errorToKoreanMessage(e) })
+      if (sessionId) track('fetch_error', { latencyMs: Date.now() - t0, kind: classifyError(e) }, sessionId)
     }
   }
 
@@ -96,24 +112,36 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     ...initial,
 
     startScenario(scenario) {
+      const sessionId = crypto.randomUUID()
+      const now = Date.now()
       set({
         ...initial,
         scenario,
         originalKorean: scenario.originalKorean,
         currentStep: 'empathy',
         payloadStatus: 'loading',
+        sessionId,
+        sessionStartedAt: now,
+        stepEnteredAt: now,
       })
+      track('session_start', { source: 'scenario', scenarioId: scenario.id }, sessionId)
       void runFetch()
     },
 
     startCustom(korean) {
+      const sessionId = crypto.randomUUID()
+      const now = Date.now()
       set({
         ...initial,
         isCustomInput: true,
         originalKorean: korean,
         currentStep: 'empathy',
         payloadStatus: 'loading',
+        sessionId,
+        sessionStartedAt: now,
+        stepEnteredAt: now,
       })
+      track('session_start', { source: 'custom', scenarioId: null }, sessionId)
       void runFetch()
     },
 

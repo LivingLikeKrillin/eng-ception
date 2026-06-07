@@ -332,3 +332,63 @@ describe('classifyError', () => {
     expect(classifyError('a raw string')).toBe('unknown')
   })
 })
+
+describe('learningStore event tracking', () => {
+  let mem: MemoryAnalyticsSink
+
+  beforeEach(() => {
+    mem = new MemoryAnalyticsSink()
+    setSink(mem)
+    useLearningStore.getState().reset()
+  })
+
+  // events for the CURRENT session only (isolates against stray fire-and-forget runFetch
+  // events bleeding in from earlier tests under a different sessionId)
+  const sessionEvents = () => {
+    const sid = useLearningStore.getState().sessionId
+    return mem.events.filter((e) => e.sessionId === sid)
+  }
+
+  it('emits session_start then fetch_start + fetch_success on a successful start', async () => {
+    useLearningStore.getState().startCustom('커스텀 문장')
+    const sid = useLearningStore.getState().sessionId
+    expect(sid).toBeTruthy()
+
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+
+    const names = sessionEvents().map((e) => e.name)
+    expect(names).toEqual(['session_start', 'fetch_start', 'fetch_success'])
+
+    const start = sessionEvents().find((e) => e.name === 'session_start')!
+    expect(start.props).toEqual({ source: 'custom', scenarioId: null })
+
+    const success = sessionEvents().find((e) => e.name === 'fetch_success')!
+    expect(typeof success.props.latencyMs).toBe('number')
+    expect(success.props.latencyMs as number).toBeGreaterThanOrEqual(0)
+  })
+
+  it('emits fetch_error with a kind when the fetch rejects', async () => {
+    await new Promise((r) => setTimeout(r, 700))   // drain stray in-flight runFetch
+    useLearningStore.getState().reset()
+    mem.clear()
+    vi.mocked(fetchSessionPayload).mockRejectedValueOnce(new Error('network down'))
+
+    useLearningStore.getState().startCustom('x')
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('error')
+    })
+
+    const err = sessionEvents().find((e) => e.name === 'fetch_error')!
+    expect(err).toBeDefined()
+    expect(err.props.kind).toBe('network')
+    expect(typeof err.props.latencyMs).toBe('number')
+  })
+
+  it('session_start records scenario source + id for a scenario start', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    const start = sessionEvents().find((e) => e.name === 'session_start')!
+    expect(start.props).toEqual({ source: 'scenario', scenarioId: 's1' })
+  })
+})
