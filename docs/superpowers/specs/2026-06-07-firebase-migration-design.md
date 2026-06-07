@@ -109,7 +109,7 @@ There is no userbase yet (solo dev, pre-launch). A login wall would add first-ru
 Implements `DataStore` against `/users/{uid}/…`. `uid` captured at construction (created per signed-in user).
 - **Scenarios are NOT stored in Firestore** (they are identical bundled seed for all users). `getScenarios()` returns the bundled seed (`seed-scenarios.ts`); `getUnlearnedScenarios(limit)` filters seed by the user's records; `saveScenarios()` is a no-op. → Firestore holds *only* user-generated data; cheaper, simpler, fewer rules.
 - `records`: subcollection `/users/{uid}/records/{record.id}`. `saveLearningRecord` = `setDoc`. No `MAX_RECORDS` cap (the cap was a localStorage-quota concern; cloud keeps all).
-- `patterns`: subcollection `/users/{uid}/patterns/{key}` where **`key = `${patternId}__${triggerVerb}`** — the dedup composite key becomes the document id, so dedup is structural. `savePattern` runs a transaction: if the doc exists, `reviewCount += 1` + `lastReviewedAt = now`; else create. (Same semantics as `localStorage.ts` lines 75–88.)
+- `patterns`: subcollection `/users/{uid}/patterns/{key}` where **`key = `${patternId}__${triggerVerb}`** — the dedup composite key becomes the document id, so dedup is structural. `savePattern` uses **`setDoc(ref, {...}, { merge: true })` with `reviewCount: increment(1)`** (Firestore `FieldValue.increment`) + `lastReviewedAt = now`, and writes the full pattern fields on first create. This yields the same dedup semantics as `localStorage.ts` lines 75–88 **and queues correctly when offline** — deliberately *not* `runTransaction`, which requires a server round-trip and fails (is not queued) against the offline cache, contradicting the §2 offline goal. The composite-key-as-doc-id makes the read-modify-write unnecessary: `increment` is a server-side atomic op that merges fine.
 - `delete*` map to `deleteDoc`.
 
 ### 4.4 `store/firestoreAnalyticsSink.ts` — `FirestoreAnalyticsSink`
@@ -121,7 +121,8 @@ Implements `AnalyticsSink`. `track()` fire-and-forgets a `setDoc` to `/users/{ui
 - Pure-local mode (unconfigured): these are inert / not registered.
 
 ### 4.6 `services/migrateToCloud.ts` — non-destructive merge
-- `migrateToCloud(uid)`: read local records + patterns; union-write into Firestore (records by id = idempotent; patterns by composite key via the same transaction as `savePattern`); on success, clear the local working store. Idempotent across repeat logins (re-login after offline local use re-runs cleanly).
+- `migrateToCloud(uid)`: read local records + patterns; union-write into Firestore (records by id via `setDoc` = idempotent; patterns by composite key via the same `setDoc`+`increment` path as `savePattern`); on success, clear the local working store. Idempotent across repeat logins (re-login after offline local use re-runs cleanly).
+- **Atomicity rule:** the local clear is conditional on **all writes resolving** (each `setDoc` promise fulfilled). When offline, Firestore's persistent cache *accepts* a write and its promise behavior is that the local write is durable in IndexedDB immediately (it syncs later); the clear is therefore safe offline because the data is durably in the cache. If any write *rejects* (e.g. permission/quota), abort the clear and leave local intact — no partial-loss window.
 
 ### 4.7 `components/.../AuthControl.tsx` — minimal UI
 - Logged out + configured: "Google로 로그인" button (→ popup). Logged in: avatar/name + "로그아웃" + a subtle synced/offline indicator. Unconfigured: renders nothing.
