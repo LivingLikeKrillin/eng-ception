@@ -3,7 +3,7 @@ import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
 import { track } from '../services/analytics'
-import { localStorageAdapter as db } from './localStorage'
+import { db } from './db'
 
 export interface PatternQuizAnswer {
   correct: boolean   // final verb pick was the trigger verb

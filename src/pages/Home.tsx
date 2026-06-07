@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { localStorageAdapter as db } from '../store/localStorage'
+import { db } from '../store/db'
 import { seedScenarios } from '../data/seed-scenarios'
 import type { Scenario } from '../types'
 import ScenarioCard from '../components/home/ScenarioCard'

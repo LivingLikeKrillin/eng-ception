@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { localStorageAdapter as db } from '../../store/localStorage'
+import { db } from '../../store/db'
 import type { LearningRecord } from '../../types'
 
 export default function RecentLearning() {

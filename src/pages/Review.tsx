@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { localStorageAdapter as db } from '../store/localStorage'
+import { db } from '../store/db'
 import type { LearningRecord, Pattern } from '../types'
 import type { Pattern5HId } from '../types/v9'
 
