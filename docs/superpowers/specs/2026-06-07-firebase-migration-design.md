@@ -176,6 +176,7 @@ Each user can touch only their own subtree. Scenarios aren't in Firestore, so ne
 - **Firestore read failure when logged in** → adapter surfaces the error to existing UI error paths; no silent fallback to stale local (local was cleared).
 - **Repeat login after logged-out offline use** → `migrateToCloud` re-runs idempotently (id-keyed records, key-keyed patterns).
 - **Two devices, concurrent edits** → eventual union via Firestore; no live conflict UI (non-goal).
+- **Pattern `id` divergence on a merge collision** → when a local pattern and an existing cloud pattern share the same composite key, the cloud doc keeps whichever `Pattern.id` was written first and only `increment`s `reviewCount`; the other `id` is discarded. Since `deletePattern` resolves by `Pattern.id`, a delete issued against the discarded id would no-op. Accepted under the union-only conflict model — rare (requires prior multi-device use + a delete of that exact pattern); revisit only if it surfaces in practice.
 
 ## 9. Known interactions / forward path
 
