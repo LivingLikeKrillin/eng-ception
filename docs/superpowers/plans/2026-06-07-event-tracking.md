@@ -330,12 +330,17 @@ The single call surface the store uses. Builds the envelope, forwards to the act
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { track, setSink, getEvents, installDevEgress } from './analytics'
 import { MemoryAnalyticsSink, noopAnalyticsSink } from '../store/analyticsSink'
 
 beforeEach(() => {
   setSink(new MemoryAnalyticsSink())
+})
+
+afterEach(() => {
+  // dev egress writes globalThis.__engEvents — clear it so it doesn't leak into the full-suite run
+  delete (globalThis as { __engEvents?: unknown }).__engEvents
 })
 
 describe('track() facade', () => {
@@ -378,7 +383,7 @@ describe('track() facade', () => {
     expect(await getEvents()).toEqual([])
   })
 
-  it('installDevEgress exposes window.__engEvents returning current events', async () => {
+  it('installDevEgress exposes globalThis.__engEvents returning current events', async () => {
     const mem = new MemoryAnalyticsSink()
     setSink(mem)
     installDevEgress()
@@ -402,10 +407,9 @@ import type { AnalyticsEvent, EventName } from '../types/events'
 import { noopAnalyticsSink, type AnalyticsSink } from '../store/analyticsSink'
 
 declare global {
-  // eslint-disable-next-line no-var
-  interface Window {
-    __engEvents?: () => Promise<AnalyticsEvent[]>
-  }
+  // Dev egress handle. `var` is required for a global augmentation (let/const don't work
+  // here); eslint's no-var rule is NOT enabled in this repo's config, so no disable needed.
+  var __engEvents: (() => Promise<AnalyticsEvent[]>) | undefined
 }
 
 // Default to noop; main.tsx bootstrap swaps in the local sink (so tests stay event-free).
@@ -436,12 +440,14 @@ export function getEvents(): Promise<AnalyticsEvent[]> {
 }
 
 // DEV-only debug egress; called from bootstrap under import.meta.env.DEV.
+// Targets globalThis (NOT window): the vitest env is 'node' (no `window`), and in the
+// browser globalThis === window, so devs still call `window.__engEvents()` in the console.
 export function installDevEgress(): void {
-  window.__engEvents = () => activeSink.getAll()
+  globalThis.__engEvents = () => activeSink.getAll()
 }
 ```
 
-> **Note on `window` in tests:** vitest's jsdom environment provides a `window`/`globalThis` with the augmented `__engEvents` property. The test reads it off `globalThis`. If the suite ever runs in a node (non-jsdom) environment, guard `installDevEgress` with `typeof window !== 'undefined'` — but this repo's vitest config uses jsdom (the existing store tests rely on `localStorage`/`document`), so no guard is needed.
+> **Test environment is `node`, not jsdom** (`vitest.config.ts`: `environment: 'node'`, `globals: false`; no jsdom/happy-dom installed — existing store tests shim `globalThis.localStorage` by hand). That is why the egress targets `globalThis` and never references `window`/`document`: those are `undefined` under node. The dev-egress test reads and cleans up `globalThis.__engEvents`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -451,7 +457,7 @@ Expected: PASS (5 tests).
 - [ ] **Step 5: Verify typecheck + lint**
 
 Run: `npx tsc -b && npm run lint`
-Expected: EXIT 0. (The `declare global` + `interface Window` augmentation must compile cleanly; the `no-var` disable comment is there because `interface` inside `declare global` can trip the lint rule in some configs — remove it if lint passes without it.)
+Expected: EXIT 0, clean. The `declare global { var __engEvents... }` augmentation compiles cleanly. **No `eslint-disable` comment** — this repo's `eslint.config.js` extends only `js.configs.recommended` + `tseslint.configs.recommended`, and `no-var` is in neither (it's a stylistic rule), so the `var` needs no disable. Adding one would be an *unused* disable directive that could itself fail lint under `--report-unused-disable-directives`.
 
 - [ ] **Step 6: Commit**
 
@@ -470,7 +476,6 @@ The heart of the plan. All changes are in `src/store/learningStore.ts` (+ its te
 
 ```ts
 // add imports at top of learningStore.test.ts
-import { track } from '../services/analytics'     // not used directly; ensures module load
 import { setSink } from '../services/analytics'
 import { MemoryAnalyticsSink } from './analyticsSink'
 
@@ -1068,18 +1073,39 @@ git commit -m "feat(store): abandonIfActive drop-off events + double-fire guard"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { registerAnalyticsLifecycle } from './analyticsLifecycle'
 import { useLearningStore } from '../store/learningStore'
+
+// vitest env is 'node' (no real `document`). Stub a minimal document with an event registry
+// so each test starts with a clean listener set — sidesteps jsdom AND listener accumulation.
+let handlers: Record<string, EventListener[]>
+
+beforeEach(() => {
+  handlers = {}
+  vi.stubGlobal('document', {
+    visibilityState: 'visible',
+    addEventListener: (type: string, fn: EventListener) => {
+      ;(handlers[type] ??= []).push(fn)
+    },
+    removeEventListener: () => {},
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+function fireVisibility(state: 'hidden' | 'visible') {
+  ;(document as unknown as { visibilityState: string }).visibilityState = state
+  for (const fn of handlers['visibilitychange'] ?? []) fn(new Event('visibilitychange'))
+}
 
 describe('registerAnalyticsLifecycle', () => {
   it('calls abandonIfActive("hidden") when the document becomes hidden', () => {
     const spy = vi.spyOn(useLearningStore.getState(), 'abandonIfActive')
     registerAnalyticsLifecycle()
-
-    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
-    document.dispatchEvent(new Event('visibilitychange'))
-
+    fireVisibility('hidden')
     expect(spy).toHaveBeenCalledWith('hidden')
     spy.mockRestore()
   })
@@ -1087,17 +1113,14 @@ describe('registerAnalyticsLifecycle', () => {
   it('does not call abandonIfActive while the document is visible', () => {
     const spy = vi.spyOn(useLearningStore.getState(), 'abandonIfActive')
     registerAnalyticsLifecycle()
-
-    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
-    document.dispatchEvent(new Event('visibilitychange'))
-
+    fireVisibility('visible')
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
 })
 ```
 
-> Note: `vi.spyOn(useLearningStore.getState(), 'abandonIfActive')` works because Zustand returns the same state object across `getState()` calls within a render-less test. Each `registerAnalyticsLifecycle()` call adds a listener; jsdom does not dedupe, but the two tests dispatch distinct `visibilityState` values so they don't cross-contaminate. If listener accumulation across tests becomes an issue, the second test should run first or the suite can be split — but as written it passes because the visible-state branch is a no-op.
+> **Why this shape:** The vitest env is `node`, so there is no real `document` — `vi.stubGlobal('document', fake)` supplies one at runtime (`vi.unstubAllGlobals()` restores after each test). `new Event(...)` is a Node 22 global. `handlers` resets each `beforeEach`, so listeners never accumulate across tests. `vi.spyOn(useLearningStore.getState(), 'abandonIfActive')` works because Zustand returns the same state object from every `getState()`, so the spy replaces the method the listener resolves at call time. **Typecheck note:** the *source* (`analyticsLifecycle.ts`) referencing `document` compiles fine — `tsconfig` includes the DOM lib (`main.tsx` already uses `document.getElementById`). Only the *test runtime* needs the stub.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1215,6 +1238,8 @@ Run: `npm run dev` (mock mode), open the app, complete one session, then in the 
 await window.__engEvents()
 ```
 Expected: an array containing `session_start`, `fetch_start`, `fetch_success`, a run of `step_dwell`, and `session_complete` — all sharing one `sessionId`, all content-free (no Korean text).
+
+Kill-switch check: restart `npm run dev` with `VITE_DISABLE_ANALYTICS=true` and confirm `window.__engEvents` is `undefined` (sink stays noop, listener not registered, egress not installed).
 
 - [ ] **Step 6: Commit (if any verification-driven fixups were needed)**
 
