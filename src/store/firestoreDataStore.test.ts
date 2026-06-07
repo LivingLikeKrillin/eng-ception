@@ -8,7 +8,10 @@ import type { Firestore } from 'firebase/firestore'
 import { createFirestoreDataStore } from './firestoreDataStore'
 import type { LearningRecord, Pattern } from '../types'
 
-const RUN = process.env.FIREBASE_EMULATOR === '1'
+// Gate on the host the emulator itself provides (set by `firebase emulators:exec` via
+// auto-discovery), NOT a hand-set flag — so an accidental run without a live emulator
+// skips cleanly instead of throwing "host and port ... must be specified".
+const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST)
 
 const makeRecord = (over: Partial<LearningRecord> = {}): LearningRecord => ({
   id: 'r1', schemaVersion: 4, scenarioId: 's1', originalKorean: 'x',

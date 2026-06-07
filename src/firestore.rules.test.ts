@@ -8,7 +8,10 @@ import {
 import { readFileSync } from 'node:fs'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 
-const RUN = process.env.FIREBASE_EMULATOR === '1'
+// Gate on the host the emulator itself provides (set by `firebase emulators:exec` via
+// auto-discovery), NOT a hand-set flag — so an accidental run without a live emulator
+// skips cleanly instead of throwing "host and port ... must be specified".
+const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST)
 
 describe.skipIf(!RUN)('firestore security rules', () => {
   let env: RulesTestEnvironment
