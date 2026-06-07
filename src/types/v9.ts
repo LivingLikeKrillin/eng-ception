@@ -24,7 +24,7 @@ export interface Pattern5HMeta {
   label: string              // "사역 (make/have/let)"
   verbs: string[]            // ["make", "have", "let"] — must be a subset of CURATED_VERBS[id]
   structure: string          // "주어 + 동사 + 목적어 + 동사원형"
-  triggerVerb: string        // which verb in `verbs` this specific session uses ("made")
+  triggerVerb: string        // base form ∈ verbs (e.g. "make", NOT "made"); inflected display lives in template/options
 }
 
 // Curated verb set per spec §3 (17 verbs total). Used by validator.
