@@ -73,6 +73,7 @@ export default function StepStructure() {
               return (
                 <button
                   key={opt.id}
+                  data-testid="quiz-verb"
                   onClick={() => handlePick(opt.id, opt.isCorrect)}
                   disabled={reveal}
                   className={`w-full p-3.5 rounded-[14px] border-[1.5px] text-left transition-all ${

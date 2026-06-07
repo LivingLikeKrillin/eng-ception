@@ -79,6 +79,7 @@ export default function StepAssemble() {
             return (
               <button
                 key={block.id}
+                data-testid="assemble-block"
                 onClick={() => tapBlock(block.id)}
                 className={`flex items-center gap-3 px-4 py-3.5 rounded-[14px] border-[1.5px] transition-all text-left ${
                   selected ? 'border-accent bg-accent/[0.06]' : 'border-line bg-c'
@@ -118,6 +119,7 @@ export default function StepAssemble() {
               return (
                 <button
                   key={conn.id}
+                  data-testid="connector"
                   onClick={() => tapConnector(conn.id)}
                   className={`px-4 py-3 rounded-[14px] border-[1.5px] text-left transition-all ${
                     selected ? 'border-accent bg-accent/[0.06]' : 'border-line bg-c'

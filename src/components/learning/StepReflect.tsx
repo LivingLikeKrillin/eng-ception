@@ -93,6 +93,7 @@ export default function StepReflect() {
                 return (
                   <button
                     key={choice.id}
+                    data-testid="after-choice"
                     onClick={() => submitAfterChoice(choice.id)}
                     disabled={afterChoice !== null}
                     className={`flex-1 p-3 rounded-[10px] border-[1.5px] text-[13px] font-medium transition-all ${

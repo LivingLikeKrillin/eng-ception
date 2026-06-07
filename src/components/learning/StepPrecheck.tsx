@@ -24,6 +24,7 @@ export default function StepPrecheck() {
           return (
             <button
               key={choice.id}
+              data-testid="precheck-choice"
               onClick={() => submitPrecheck(choice.id)}
               className={`pressable flex-1 p-5 rounded-[14px] text-left transition-all ${
                 selected

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "dev:api": "node --env-file=.env.local dev-server.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.60.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

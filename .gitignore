@@ -4,6 +4,12 @@ node_modules
 # Build output
 dist
 
+# Playwright e2e artifacts
+test-results/
+playwright-report/
+blob-report/
+.last-run.json
+
 # Environment variables
 .env
 .env.local
