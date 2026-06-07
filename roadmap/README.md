@@ -87,7 +87,7 @@ Phase 1 (v9 빌드)
           └─▶ Phase 3 (Firebase)   ← 계정 = 텔레메트리/멀티기기 전제
                  └─▶ Phase 4 (성장 · A/B는 텔레메트리 필요)
 ```
-*권장 순서. SRS 코어는 LocalStorage 위에서 Firebase 전에 먼저 가능 — 순서를 바꾸려면 여기서 결정.*
+*확정 순서 (2026-06-07): SRS 코어는 LocalStorage 위에서 Firebase 전에 먼저. 단 Dynamic-N 튜닝·Time-to-Stabilization A/B만 텔레메트리(Phase 3) 누적 이후.*
 
 ---
 
