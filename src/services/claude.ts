@@ -6,7 +6,7 @@ import { mockSessionPayload } from './mocks'
 const API_URL = '/api/chat'
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const MAX_RETRIES = 1
-const FETCH_TIMEOUT_MS = 4_000
+const FETCH_TIMEOUT_MS = 60_000
 
 export async function fetchSessionPayload(korean: string): Promise<SessionPayload> {
   if (USE_MOCK) return mockSessionPayload(korean)
