@@ -74,7 +74,7 @@ Per-event `props` (all content-free):
 
 | Event | When | props |
 |---|---|---|
-| `session_start` | `startScenario` / `startCustom` | `source: 'scenario'\|'custom'`, `scenarioId: string\|null`, `pattern5hId: string\|null` (null until payload ready) |
+| `session_start` | `startScenario` / `startCustom` | `source: 'scenario'\|'custom'`, `scenarioId: string\|null` |
 | `fetch_start` | top of `runFetch` | — |
 | `fetch_success` | payload resolved + validated | `latencyMs: number` |
 | `fetch_error` | `runFetch` catch | `latencyMs: number`, `kind: 'timeout'\|'parse'\|'network'\|'unknown'` |
@@ -84,8 +84,9 @@ Per-event `props` (all content-free):
 
 Notes:
 - `pattern5hId`/`scenarioId`/`triggerVerb` are taxonomy identifiers, **not** PII.
-- `fetch_error.kind` reuses the existing `errorToKoreanMessage` classification (timeout/parse/network/unknown).
-- `step_dwell` for `input` is not meaningful (session starts at empathy); the first dwell measured is `empathy`.
+- **`session_start` carries no `pattern5hId`** — the pattern is unknown at start (`payload` is still `null`; fetch is async). The pattern reaches the event log on `session_complete`. A session that abandons before the payload resolves simply has no pattern attribution; that is acceptable (drop-off-before-load is itself the signal).
+- `fetch_error.kind` is derived by a new `classifyError(e): 'timeout'|'parse'|'network'|'unknown'` helper extracted from the existing `errorToKoreanMessage` logic (which today returns a Korean string, not a kind). `errorToKoreanMessage` is refactored to consume `classifyError` so the two stay in sync. See §4.5.
+- `step_dwell` for `input` is not meaningful (session starts at empathy); the first dwell measured is `empathy`. **No `step_dwell` fires for `step4`** — dwell fires on *leaving* a step, and nothing transitions out of `step4`; `complete()` is the terminal event there.
 
 ## 4. Architecture & components
 
@@ -114,28 +115,29 @@ Mirrors the `DataStore` abstraction. This is the slot-in seam for `FirestoreAnal
 - `track(name, props, sessionId)` builds the envelope (`crypto.randomUUID()`, `toISOString()`) and forwards to the sink.
 - `NoopAnalyticsSink` for tests / when disabled.
 - **Kill-switch:** `VITE_DISABLE_ANALYTICS === 'true'` → noop sink (consent gate slots here later).
-- **Dev egress (DEV only):** assigns `window.__engEvents = () => sink.getAll()` and exposes `exportEventsJson()`. Stripped in prod by `import.meta.env.DEV` guard.
+- **Dev egress (DEV only):** assigns `window.__engEvents = () => sink.getAll()` and exposes `exportEventsJson()`. Stripped in prod by an `import.meta.env.DEV` guard. The `window.__engEvents` property needs a `declare global { interface Window { __engEvents?: () => Promise<AnalyticsEvent[]> } }` augmentation for strict TS.
 
 ### 4.5 `src/store/learningStore.ts` (instrumentation — edits, not new)
-New state fields: `sessionId: string | null`, `sessionStartedAt: number | null`, `stepEnteredAt: number | null`, `sessionEnded: boolean` (guards double-abandon).
+New state fields: `sessionId: string | null`, `sessionStartedAt: number | null`, `stepEnteredAt: number | null`, `sessionEnded: boolean` (guards double-firing of a terminal event). **All four must be added to the `initial` constant** (the `set(initial)` reset baseline), not only to the `V9LearningState` interface — §6's double-fire guard relies on `set(initial)` restoring `sessionEnded = false` and clearing `sessionId` for the next session. Defaults in `initial`: `sessionId: null`, `sessionStartedAt: null`, `stepEnteredAt: null`, `sessionEnded: false`.
 
-- **Private `transitionTo(step)`** helper: fires `step_dwell` for the step being left (`now − stepEnteredAt`), sets `stepEnteredAt = now`, sets `currentStep = step`. **All** existing step changes route through it (`advanceFromEmpathy`, the `submitPrecheck` timeout, `advanceToStep1/2/3/4`). This is the single dwell source.
-- **`startScenario` / `startCustom`**: first call `maybeTrackAbandon('restart')` (an in-progress prior session being overwritten), then generate `sessionId`, set `sessionStartedAt = stepEnteredAt = now`, `sessionEnded = false`, `track('session_start', …)`, then `runFetch`.
-- **`runFetch`**: capture `t0 = now`; `track('fetch_start')`; on success `track('fetch_success', { latencyMs })` and patch the pending `session_start` pattern via a separate event is unnecessary — `session_complete` carries the final pattern, so `fetch_success` need not. on error `track('fetch_error', { latencyMs, kind })`.
+- **Private `transitionTo(step)`** helper (closure inside the `create()` factory): fires `step_dwell` for the step being left (`now − stepEnteredAt`, skipped if `stepEnteredAt == null`), sets `stepEnteredAt = now`, sets `currentStep = step`. **All** existing step changes route through it: `advanceFromEmpathy`, the `submitPrecheck` timeout, `advanceToStep1`, `advanceToStep2`, **both `currentStep:'step3'` exits of `advanceToStep3`** (the `patternSaved` early-return *and* the post-`savePattern` path), and `advanceToStep4`. This is the single dwell source. (Session entry — `startScenario`/`startCustom` setting `currentStep:'empathy'` — is **not** a `transitionTo`; it initializes `stepEnteredAt` directly so no spurious dwell fires for `input`.)
+- **`startScenario` / `startCustom`**: first call `abandonIfActive('restart')` (an in-progress prior session being overwritten — these actions `set({...initial})` inline, they do not call `reset()`), then generate `sessionId`, set `sessionStartedAt = stepEnteredAt = now`, `sessionEnded = false`, `track('session_start', …)`, then `runFetch`.
+- **`runFetch`**: capture `t0 = now`; `track('fetch_start')`. On success → `track('fetch_success', { latencyMs: now − t0 })`. On error → `track('fetch_error', { latencyMs: now − t0, kind: classifyError(e) })`. (`runFetch` is the only fetch path, so **`retryFetch` automatically re-emits** `fetch_start` + `fetch_success`/`fetch_error` under the *same* `sessionId` — this is intended: it measures whether retry recovers, a stated goal. Repeat fetch events per session are expected, not a bug.)
+- **`classifyError(e): 'timeout'|'parse'|'network'|'unknown'`** (NEW helper, module-level): extracted from the current `errorToKoreanMessage` string-matching (`timeout`/`parse`/`fetch|network`/else). `errorToKoreanMessage` is refactored to call `classifyError` and map the kind → Korean string, so the user-facing message and the event `kind` never diverge.
 - **`complete()`**: `track('session_complete', …)` (duration + outcome signals) and set `sessionEnded = true` **before** `set(initial)`.
-- **`reset()`**: `maybeTrackAbandon('reset')` then `set(initial)`.
-- **`maybeTrackAbandon(reason)`** helper: if `sessionId && !sessionEnded && currentStep !== 'step4'`, fire `session_abandon`, set `sessionEnded = true`.
+- **`reset()`**: `abandonIfActive('reset')` then `set(initial)`.
+- **Public `abandonIfActive(reason: 'reset'|'restart'|'hidden')`** action (added to the `V9LearningState` interface, so external callers like the lifecycle listener can reach it via `useLearningStore.getState().abandonIfActive(...)`): if `sessionId && !sessionEnded && currentStep !== 'step4'`, fire `session_abandon{ lastStep: currentStep, reason, durationMs: now − sessionStartedAt }` and set `sessionEnded = true`. Idempotent — the `!sessionEnded` guard makes repeat calls no-ops.
 
 ### 4.6 `src/services/analyticsLifecycle.ts` (NEW) — tab-close abandon
 - Registers one `document.addEventListener('visibilitychange', …)` (reliable on mobile PWA, unlike `beforeunload`).
-- On `hidden`: read `useLearningStore.getState()`; if a session is in-progress and not ended, call the store's abandon path with `reason: 'hidden'`.
+- On `hidden`: call `useLearningStore.getState().abandonIfActive('hidden')` (the public action from §4.5; its internal guard makes it a no-op when no session is active or one already ended).
 - Called once from `bootstrap()` in `main.tsx`, after `db.init()`.
 
 ## 5. Data flow
 
 ```
 startCustom(korean)
-  → maybeTrackAbandon('restart')      // if a prior session was live
+  → abandonIfActive('restart')        // if a prior session was live
   → sessionId = uuid; track(session_start{source:'custom', scenarioId:null})
   → runFetch: track(fetch_start) … track(fetch_success{latencyMs}) | track(fetch_error{latencyMs,kind})
 advanceFromEmpathy → transitionTo(precheck)  → step_dwell{step:'empathy', dwellMs}
@@ -143,7 +145,7 @@ submitPrecheck     → (400ms) transitionTo(step0) → step_dwell{step:'precheck
 advanceToStep1/2/3/4 → transitionTo(…)        → step_dwell{step:'stepN', …}
 complete()         → track(session_complete{durationMs, …outcome}) ; sessionEnded=true ; set(initial)
 — OR mid-flow —
-reset() / restart  → maybeTrackAbandon → session_abandon{lastStep, reason, durationMs}
+reset() / restart  → abandonIfActive → session_abandon{lastStep, reason, durationMs}
 tab hidden mid-flow→ visibilitychange → session_abandon{reason:'hidden'}
 ```
 
@@ -154,7 +156,7 @@ Every event shares the session's `sessionId`, so a funnel (start → dwell seque
 - **Analytics never throws into the app.** `localAnalyticsSink.track` and the facade both `try/catch`. Worst case: an event is dropped.
 - **localStorage quota.** Ring buffer caps at `MAX_EVENTS`; serialization errors caught and skipped.
 - **Double-abandon guard.** `sessionEnded` flag prevents `reset()`-after-`complete()` or `visibilitychange`-then-`reset()` from firing two terminal events. `complete()` sets it before `set(initial)`; `set(initial)` resets it to `false` for the next session.
-- **Restart over live session.** `startScenario`/`startCustom` run `maybeTrackAbandon('restart')` first so abandon-by-restart is captured (these actions `set({...initial})` inline, they do *not* call `reset()`).
+- **Restart over live session.** `startScenario`/`startCustom` run `abandonIfActive('restart')` first so abandon-by-restart is captured (these actions `set({...initial})` inline, they do *not* call `reset()`).
 - **StrictMode double-invoke (dev).** `bootstrap()` runs outside React render, so the `visibilitychange` listener registers once; the store actions are idempotent w.r.t. event identity is not guaranteed, but dev double-mount does not call store actions twice. Acceptable for dev-only noise.
 - **Test isolation.** Default sink in test env is `NoopAnalyticsSink` (or an injected memory sink); existing 55 tests must not write real events.
 
