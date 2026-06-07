@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useLearningStore, isAssemblyCorrect } from './learningStore'
+import { useLearningStore, isAssemblyCorrect, classifyError } from './learningStore'
 import { fetchSessionPayload } from '../services/claude'
+import { setSink } from '../services/analytics'
+import { MemoryAnalyticsSink } from './analyticsSink'
 import type { Scenario } from '../types'
 
 vi.mock('../services/claude', () => ({
@@ -317,5 +319,16 @@ describe('learningStore error path', () => {
     })
     expect(useLearningStore.getState().error).toBeNull()
     expect(useLearningStore.getState().payload).not.toBeNull()
+  })
+})
+
+describe('classifyError', () => {
+  it('classifies by message substring', () => {
+    expect(classifyError(new Error('request timeout'))).toBe('timeout')
+    expect(classifyError(new Error('failed to parse JSON'))).toBe('parse')
+    expect(classifyError(new Error('network down'))).toBe('network')
+    expect(classifyError(new Error('fetch failed'))).toBe('network')
+    expect(classifyError(new Error('something else'))).toBe('unknown')
+    expect(classifyError('a raw string')).toBe('unknown')
   })
 })

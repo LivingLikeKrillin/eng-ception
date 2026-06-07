@@ -61,12 +61,25 @@ const initial = {
   patternSaved: false,
 }
 
-function errorToKoreanMessage(e: unknown): string {
+export type FetchErrorKind = 'timeout' | 'parse' | 'network' | 'unknown'
+
+export function classifyError(e: unknown): FetchErrorKind {
   const msg = e instanceof Error ? e.message : String(e)
-  if (msg.includes('timeout')) return '응답이 너무 오래 걸려요. 다시 시도해주세요.'
-  if (msg.includes('parse')) return 'AI 응답 형식이 이상해요. 다시 시도해주세요.'
-  if (msg.includes('fetch') || msg.includes('network')) return '네트워크가 불안정해요.'
-  return '문제가 생겼어요. 다시 시도해주세요.'
+  if (msg.includes('timeout')) return 'timeout'
+  if (msg.includes('parse')) return 'parse'
+  if (msg.includes('fetch') || msg.includes('network')) return 'network'
+  return 'unknown'
+}
+
+const KIND_MESSAGE: Record<FetchErrorKind, string> = {
+  timeout: '응답이 너무 오래 걸려요. 다시 시도해주세요.',
+  parse: 'AI 응답 형식이 이상해요. 다시 시도해주세요.',
+  network: '네트워크가 불안정해요.',
+  unknown: '문제가 생겼어요. 다시 시도해주세요.',
+}
+
+function errorToKoreanMessage(e: unknown): string {
+  return KIND_MESSAGE[classifyError(e)]
 }
 
 export const useLearningStore = create<V9LearningState>((set, get) => {
