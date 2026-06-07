@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
+import { track } from '../services/analytics'
 import { localStorageAdapter as db } from './localStorage'
 
 export interface PatternQuizAnswer {
@@ -26,10 +27,17 @@ interface V9LearningState {
   afterChoice: string | null
   patternSaved: boolean
 
+  // event-tracking session state
+  sessionId: string | null
+  sessionStartedAt: number | null
+  stepEnteredAt: number | null
+  sessionEnded: boolean
+
   startScenario: (scenario: Scenario) => void
   startCustom: (korean: string) => void
   retryFetch: () => void
   reset: () => void
+  abandonIfActive: (reason: 'reset' | 'restart' | 'hidden') => void
 
   advanceFromEmpathy: () => void
   submitPrecheck: (choiceId: string) => void
@@ -59,48 +67,93 @@ const initial = {
   connectorChoice: null as string | null,
   afterChoice: null as string | null,
   patternSaved: false,
+  sessionId: null as string | null,
+  sessionStartedAt: null as number | null,
+  stepEnteredAt: null as number | null,
+  sessionEnded: false,
+}
+
+export type FetchErrorKind = 'timeout' | 'parse' | 'network' | 'unknown'
+
+export function classifyError(e: unknown): FetchErrorKind {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (msg.includes('timeout')) return 'timeout'
+  if (msg.includes('parse')) return 'parse'
+  if (msg.includes('fetch') || msg.includes('network')) return 'network'
+  return 'unknown'
+}
+
+const KIND_MESSAGE: Record<FetchErrorKind, string> = {
+  timeout: '응답이 너무 오래 걸려요. 다시 시도해주세요.',
+  parse: 'AI 응답 형식이 이상해요. 다시 시도해주세요.',
+  network: '네트워크가 불안정해요.',
+  unknown: '문제가 생겼어요. 다시 시도해주세요.',
 }
 
 function errorToKoreanMessage(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e)
-  if (msg.includes('timeout')) return '응답이 너무 오래 걸려요. 다시 시도해주세요.'
-  if (msg.includes('parse')) return 'AI 응답 형식이 이상해요. 다시 시도해주세요.'
-  if (msg.includes('fetch') || msg.includes('network')) return '네트워크가 불안정해요.'
-  return '문제가 생겼어요. 다시 시도해주세요.'
+  return KIND_MESSAGE[classifyError(e)]
 }
 
 export const useLearningStore = create<V9LearningState>((set, get) => {
   const runFetch = async () => {
+    const sessionId = get().sessionId
+    const t0 = Date.now()
+    if (sessionId) track('fetch_start', {}, sessionId)
     try {
       const payload = await fetchSessionPayload(get().originalKorean)
       set({ payload, payloadStatus: 'ready', error: null })
+      if (sessionId) track('fetch_success', { latencyMs: Date.now() - t0 }, sessionId)
     } catch (e) {
       set({ payloadStatus: 'error', error: errorToKoreanMessage(e) })
+      if (sessionId) track('fetch_error', { latencyMs: Date.now() - t0, kind: classifyError(e) }, sessionId)
     }
+  }
+
+  // Single dwell source: emit step_dwell for the step being LEFT, then move.
+  const transitionTo = (step: V9Step) => {
+    const s = get()
+    if (s.sessionId && s.stepEnteredAt != null) {
+      track('step_dwell', { step: s.currentStep, dwellMs: Date.now() - s.stepEnteredAt }, s.sessionId)
+    }
+    set({ currentStep: step, stepEnteredAt: Date.now() })
   }
 
   return {
     ...initial,
 
     startScenario(scenario) {
+      get().abandonIfActive('restart')
+      const sessionId = crypto.randomUUID()
+      const now = Date.now()
       set({
         ...initial,
         scenario,
         originalKorean: scenario.originalKorean,
         currentStep: 'empathy',
         payloadStatus: 'loading',
+        sessionId,
+        sessionStartedAt: now,
+        stepEnteredAt: now,
       })
+      track('session_start', { source: 'scenario', scenarioId: scenario.id }, sessionId)
       void runFetch()
     },
 
     startCustom(korean) {
+      get().abandonIfActive('restart')
+      const sessionId = crypto.randomUUID()
+      const now = Date.now()
       set({
         ...initial,
         isCustomInput: true,
         originalKorean: korean,
         currentStep: 'empathy',
         payloadStatus: 'loading',
+        sessionId,
+        sessionStartedAt: now,
+        stepEnteredAt: now,
       })
+      track('session_start', { source: 'custom', scenarioId: null }, sessionId)
       void runFetch()
     },
 
@@ -110,17 +163,30 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     reset() {
+      get().abandonIfActive('reset')
       set(initial)
     },
 
+    abandonIfActive(reason) {
+      const s = get()
+      if (s.sessionId && !s.sessionEnded && s.currentStep !== 'step4') {
+        track('session_abandon', {
+          lastStep: s.currentStep,
+          reason,
+          durationMs: Date.now() - (s.sessionStartedAt ?? Date.now()),
+        }, s.sessionId)
+        set({ sessionEnded: true })
+      }
+    },
+
     advanceFromEmpathy() {
-      set({ currentStep: 'precheck' })
+      transitionTo('precheck')
     },
 
     submitPrecheck(choiceId) {
       set({ precheckChoice: choiceId })
       setTimeout(() => {
-        if (get().currentStep === 'precheck') set({ currentStep: 'step0' })
+        if (get().currentStep === 'precheck') transitionTo('step0')
       }, 400)
     },
 
@@ -129,7 +195,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep1() {
-      set({ currentStep: 'step1' })
+      transitionTo('step1')
     },
 
     tapBlock(blockId) {
@@ -152,14 +218,14 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep2() {
-      set({ currentStep: 'step2' })
+      transitionTo('step2')
     },
 
     async advanceToStep3() {
       const s = get()
       if (!s.payload) return
       if (s.patternSaved) {
-        set({ currentStep: 'step3' })
+        transitionTo('step3')
         return
       }
       const pattern: Pattern = {
@@ -176,7 +242,8 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         lastReviewedAt: null,
       }
       await db.savePattern(pattern)
-      set({ patternSaved: true, currentStep: 'step3' })
+      set({ patternSaved: true })
+      transitionTo('step3')
     },
 
     submitAfterChoice(id) {
@@ -184,12 +251,23 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep4() {
-      set({ currentStep: 'step4' })
+      transitionTo('step4')
     },
 
     async complete() {
       const s = get()
       if (!s.payload) return
+      if (s.sessionId) {
+        track('session_complete', {
+          pattern5hId: s.payload.pattern5h.id,
+          triggerVerb: s.payload.pattern5h.triggerVerb,
+          assemblyCorrect: isAssemblyCorrect(s),
+          patternQuizCorrect: s.patternQuizAnswer?.correct === true,
+          patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
+          durationMs: Date.now() - (s.sessionStartedAt ?? Date.now()),
+        }, s.sessionId)
+        set({ sessionEnded: true })
+      }
       const record: LearningRecord = {
         id: crypto.randomUUID(),
         schemaVersion: 4,

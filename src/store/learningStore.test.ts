@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useLearningStore, isAssemblyCorrect } from './learningStore'
+import { useLearningStore, isAssemblyCorrect, classifyError } from './learningStore'
 import { fetchSessionPayload } from '../services/claude'
+import { setSink } from '../services/analytics'
+import { MemoryAnalyticsSink } from './analyticsSink'
 import type { Scenario } from '../types'
 
 vi.mock('../services/claude', () => ({
@@ -317,5 +319,186 @@ describe('learningStore error path', () => {
     })
     expect(useLearningStore.getState().error).toBeNull()
     expect(useLearningStore.getState().payload).not.toBeNull()
+  })
+})
+
+describe('classifyError', () => {
+  it('classifies by message substring', () => {
+    expect(classifyError(new Error('request timeout'))).toBe('timeout')
+    expect(classifyError(new Error('failed to parse JSON'))).toBe('parse')
+    expect(classifyError(new Error('network down'))).toBe('network')
+    expect(classifyError(new Error('fetch failed'))).toBe('network')
+    expect(classifyError(new Error('something else'))).toBe('unknown')
+    expect(classifyError('a raw string')).toBe('unknown')
+  })
+})
+
+describe('learningStore event tracking', () => {
+  let mem: MemoryAnalyticsSink
+
+  beforeEach(() => {
+    mem = new MemoryAnalyticsSink()
+    setSink(mem)
+    useLearningStore.getState().reset()
+  })
+
+  // events for the CURRENT session only (isolates against stray fire-and-forget runFetch
+  // events bleeding in from earlier tests under a different sessionId)
+  const sessionEvents = () => {
+    const sid = useLearningStore.getState().sessionId
+    return mem.events.filter((e) => e.sessionId === sid)
+  }
+
+  it('emits session_start then fetch_start + fetch_success on a successful start', async () => {
+    useLearningStore.getState().startCustom('커스텀 문장')
+    const sid = useLearningStore.getState().sessionId
+    expect(sid).toBeTruthy()
+
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+
+    const names = sessionEvents().map((e) => e.name)
+    expect(names).toEqual(['session_start', 'fetch_start', 'fetch_success'])
+
+    const start = sessionEvents().find((e) => e.name === 'session_start')!
+    expect(start.props).toEqual({ source: 'custom', scenarioId: null })
+
+    const success = sessionEvents().find((e) => e.name === 'fetch_success')!
+    expect(typeof success.props.latencyMs).toBe('number')
+    expect(success.props.latencyMs as number).toBeGreaterThanOrEqual(0)
+  })
+
+  it('emits fetch_error with a kind when the fetch rejects', async () => {
+    await new Promise((r) => setTimeout(r, 700))   // drain stray in-flight runFetch
+    useLearningStore.getState().reset()
+    mem.clear()
+    vi.mocked(fetchSessionPayload).mockRejectedValueOnce(new Error('network down'))
+
+    useLearningStore.getState().startCustom('x')
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('error')
+    })
+
+    const err = sessionEvents().find((e) => e.name === 'fetch_error')!
+    expect(err).toBeDefined()
+    expect(err.props.kind).toBe('network')
+    expect(typeof err.props.latencyMs).toBe('number')
+  })
+
+  it('session_start records scenario source + id for a scenario start', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    const start = sessionEvents().find((e) => e.name === 'session_start')!
+    expect(start.props).toEqual({ source: 'scenario', scenarioId: 's1' })
+  })
+
+  it('emits step_dwell for each step left, in order, never for input or step4', async () => {
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const payload = useLearningStore.getState().payload!
+    const order = [...payload.assembly.blocks].sort((a, b) => a.order - b.order).map((b) => b.id)
+    const conn = payload.assembly.connectors.find((c) => c.isCorrect)!.id
+
+    useLearningStore.getState().advanceFromEmpathy()
+    useLearningStore.getState().submitPrecheck('first')
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().currentStep).toBe('step0')
+    })
+    useLearningStore.getState().advanceToStep1()
+    order.forEach((id) => useLearningStore.getState().tapBlock(id))
+    useLearningStore.getState().tapConnector(conn)
+    useLearningStore.getState().advanceToStep2()
+    await useLearningStore.getState().advanceToStep3()
+    useLearningStore.getState().advanceToStep4()
+
+    const dwellSteps = sessionEvents()
+      .filter((e) => e.name === 'step_dwell')
+      .map((e) => e.props.step)
+    expect(dwellSteps).toEqual(['empathy', 'precheck', 'step0', 'step1', 'step2', 'step3'])
+
+    for (const e of sessionEvents().filter((e) => e.name === 'step_dwell')) {
+      expect(typeof e.props.dwellMs).toBe('number')
+      expect(e.props.dwellMs as number).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('emits session_complete with outcome signals + duration before reset', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const sid = useLearningStore.getState().sessionId
+    const payload = useLearningStore.getState().payload!
+    useLearningStore.getState().submitPatternQuiz({ correct: true, unsure: false })
+    useLearningStore.setState({ currentStep: 'step4' })
+
+    await useLearningStore.getState().complete()
+
+    // capture by the captured sid (state is reset by now)
+    const complete = mem.events.find((e) => e.sessionId === sid && e.name === 'session_complete')!
+    expect(complete).toBeDefined()
+    expect(complete.props.pattern5hId).toBe(payload.pattern5h.id)
+    expect(complete.props.triggerVerb).toBe(payload.pattern5h.triggerVerb)
+    expect(complete.props.patternQuizCorrect).toBe(true)
+    expect(complete.props.patternQuizUnsure).toBe(false)
+    expect(typeof complete.props.durationMs).toBe('number')
+
+    // session fully reset
+    expect(useLearningStore.getState().sessionId).toBeNull()
+  })
+
+  it('emits session_abandon with lastStep when reset() interrupts a session', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    useLearningStore.getState().advanceFromEmpathy()   // now at precheck
+    const sid = useLearningStore.getState().sessionId
+    useLearningStore.getState().reset()
+
+    const abandon = mem.events.find((e) => e.sessionId === sid && e.name === 'session_abandon')!
+    expect(abandon).toBeDefined()
+    expect(abandon.props.lastStep).toBe('precheck')
+    expect(abandon.props.reason).toBe('reset')
+    expect(typeof abandon.props.durationMs).toBe('number')
+  })
+
+  it('does NOT emit session_abandon after a completed session (no double terminal event)', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const sid = useLearningStore.getState().sessionId
+    useLearningStore.setState({ currentStep: 'step4' })
+    await useLearningStore.getState().complete()
+    useLearningStore.getState().reset()   // reset after complete
+
+    const abandons = mem.events.filter((e) => e.sessionId === sid && e.name === 'session_abandon')
+    expect(abandons).toHaveLength(0)
+  })
+
+  it('emits session_abandon(restart) when a new session starts over a live one', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    useLearningStore.getState().advanceFromEmpathy()
+    const firstSid = useLearningStore.getState().sessionId
+    useLearningStore.getState().startCustom('새 세션')   // restart over live
+
+    const abandon = mem.events.find((e) => e.sessionId === firstSid && e.name === 'session_abandon')!
+    expect(abandon).toBeDefined()
+    expect(abandon.props.reason).toBe('restart')
+    expect(abandon.props.lastStep).toBe('precheck')
+  })
+
+  it('abandonIfActive is a no-op when no session is active', () => {
+    useLearningStore.getState().reset()        // no live session
+    const before = mem.events.length
+    useLearningStore.getState().abandonIfActive('hidden')
+    expect(mem.events.length).toBe(before)
   })
 })

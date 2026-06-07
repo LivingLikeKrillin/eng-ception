@@ -43,18 +43,23 @@ eng-ception/
 │   ├── index.css                 # Tailwind 임포트
 │   ├── types/
 │   │   ├── index.ts              # Scenario, LearningRecord(v4), Pattern
-│   │   └── v9.ts                 # V9Step, Pattern5HId, CURATED_VERBS(17), SessionPayload 등 v9 핵심 타입
+│   │   ├── v9.ts                 # V9Step, Pattern5HId, CURATED_VERBS(17), SessionPayload 등 v9 핵심 타입
+│   │   └── events.ts             # AnalyticsEvent 엔벨로프 + EventName union (이벤트 트래킹)
 │   ├── data/
 │   │   └── seed-scenarios.ts     # 시드 시나리오 15개 (s1~s15; s11~s15는 저빈도 5형식 커버)
 │   ├── services/
 │   │   ├── claude.ts             # fetchSessionPayload — 세션당 단 1회 API 호출 (+ mock/timeout/retry)
 │   │   ├── prompts.ts            # SYSTEM_PROMPT(5형식 코치) + buildUserMessage
 │   │   ├── validate.ts           # assertSessionPayload — 런타임 스키마 검증 (실응답 가드)
-│   │   └── mocks.ts              # mockSessionPayload — VITE_USE_MOCK=true 시 사용
+│   │   ├── mocks.ts              # mockSessionPayload — VITE_USE_MOCK=true 시 사용
+│   │   ├── analytics.ts          # track() 파사드 — swappable AnalyticsSink + dev egress
+│   │   └── analyticsLifecycle.ts # visibilitychange → session_abandon(hidden)
 │   ├── store/
 │   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화 — Firestore 어댑터 슬롯인 지점)
 │   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v4, patternId+triggerVerb dedup)
-│   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect
+│   │   ├── analyticsSink.ts      # AnalyticsSink 인터페이스 + noop + MemoryAnalyticsSink
+│   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (eng-ception:events)
+│   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect + 이벤트 계측
 │   ├── pages/
 │   │   ├── Home.tsx              # 홈 (빠른 입력 + 시나리오 + 최근 학습)
 │   │   ├── Learn.tsx             # 학습 페이지 (LearningFlow 호스트)
@@ -173,6 +178,10 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 - **패턴 dedup: `patternId + triggerVerb` 복합키.** 같은 키 재저장 시 새로 안 만들고 `reviewCount++` + `lastReviewedAt` 갱신 → 향후 SRS 하위 레이어 키
 - `MAX_RECORDS = 100` (초과 시 오래된 기록부터 제거)
 
+## 이벤트 트래킹 (event tracking)
+
+세션의 **행동·시간 레이어**를 포착 — `LearningRecord`(완료 시에만 저장)가 못 보는 이탈 세션/단계별 시간/fetch 지연. `services/analytics.ts`의 `track(name, props, sessionId)` 파사드가 content-free `AnalyticsEvent`를 swappable `AnalyticsSink`로 보냄. 기본 sink는 noop; `main.tsx`가 `localAnalyticsSink`(localStorage 링버퍼, `eng-ception:events`, 자체 version key, MAX 1000 회전)를 주입 (`VITE_DISABLE_ANALYTICS=true`면 비활성, noop 유지). 계측은 `learningStore`에 집중 — `transitionTo`(단계별 dwell), 타임드 `runFetch`(fetch_start/success/error + `classifyError` kind), `complete`(session_complete), 공개 `abandonIfActive(reason)`(reset/restart + `visibilitychange` 리스너로 탭 종료 drop-off; `sessionEnded` 가드로 중복 방지). 7종 이벤트: `session_start`/`session_complete`/`session_abandon`/`step_dwell`/`fetch_start`/`fetch_success`/`fetch_error`. 이벤트는 PIPA-safe (raw 한국어/영어 없음 — id/pattern/bool/타이밍만). dev에서 `window.__engEvents()`(=globalThis)로 확인. Firebase/PostHog sink는 동일 `AnalyticsSink` 인터페이스로 나중 슬롯인 (DataStore 평행). 설계: `docs/superpowers/specs/2026-06-07-event-tracking-design.md`.
+
 ## 개발 컨벤션
 
 - TypeScript strict 모드
@@ -191,20 +200,21 @@ npm run dev:api    # API 프록시 서버 (Express, port 3001, --env-file=.env.l
 npm run build      # 프로덕션 빌드 (tsc -b && vite build)
 npm run lint       # ESLint 실행
 npm run preview    # 빌드 결과 미리보기
-npm run test       # Vitest 단위/통합 (= vitest run, 55 tests)
+npm run test       # Vitest 단위/통합 (= vitest run, 80 tests)
 npm run test:watch # Vitest watch
 npm run test:e2e   # Playwright e2e (mock 모드, vite strict port 5219)
 ```
 
 **개발 시:** mock 모드(`VITE_USE_MOCK=true`)면 `npm run dev`만으로 충분. 실 Claude API를 쓰려면 `VITE_USE_MOCK=false` + `npm run dev:api` 동시 실행.
 
-**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (55) · `npm run lint` · `npm run test:e2e`.
+**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (80) · `npm run lint` · `npm run test:e2e`.
 
 ## 환경 변수
 
 ```
-ANTHROPIC_API_KEY=  # Claude API 키 (서버 사이드 — api/chat.ts, dev-server.js 에서만)
-VITE_USE_MOCK=      # 'true' 면 mockSessionPayload 사용 (API 호출 안 함)
+ANTHROPIC_API_KEY=       # Claude API 키 (서버 사이드 — api/chat.ts, dev-server.js 에서만)
+VITE_USE_MOCK=           # 'true' 면 mockSessionPayload 사용 (API 호출 안 함)
+VITE_DISABLE_ANALYTICS=  # 'true' 면 이벤트 트래킹 비활성 (기본 noop sink 유지)
 ```
 
 ## 다음 단계 (미완료)
