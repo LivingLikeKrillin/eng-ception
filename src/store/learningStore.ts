@@ -37,6 +37,7 @@ interface V9LearningState {
   startCustom: (korean: string) => void
   retryFetch: () => void
   reset: () => void
+  abandonIfActive: (reason: 'reset' | 'restart' | 'hidden') => void
 
   advanceFromEmpathy: () => void
   submitPrecheck: (choiceId: string) => void
@@ -121,6 +122,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     ...initial,
 
     startScenario(scenario) {
+      get().abandonIfActive('restart')
       const sessionId = crypto.randomUUID()
       const now = Date.now()
       set({
@@ -138,6 +140,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     startCustom(korean) {
+      get().abandonIfActive('restart')
       const sessionId = crypto.randomUUID()
       const now = Date.now()
       set({
@@ -160,7 +163,20 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     reset() {
+      get().abandonIfActive('reset')
       set(initial)
+    },
+
+    abandonIfActive(reason) {
+      const s = get()
+      if (s.sessionId && !s.sessionEnded && s.currentStep !== 'step4') {
+        track('session_abandon', {
+          lastStep: s.currentStep,
+          reason,
+          durationMs: Date.now() - (s.sessionStartedAt ?? Date.now()),
+        }, s.sessionId)
+        set({ sessionEnded: true })
+      }
     },
 
     advanceFromEmpathy() {

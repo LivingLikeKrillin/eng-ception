@@ -449,4 +449,56 @@ describe('learningStore event tracking', () => {
     // session fully reset
     expect(useLearningStore.getState().sessionId).toBeNull()
   })
+
+  it('emits session_abandon with lastStep when reset() interrupts a session', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    useLearningStore.getState().advanceFromEmpathy()   // now at precheck
+    const sid = useLearningStore.getState().sessionId
+    useLearningStore.getState().reset()
+
+    const abandon = mem.events.find((e) => e.sessionId === sid && e.name === 'session_abandon')!
+    expect(abandon).toBeDefined()
+    expect(abandon.props.lastStep).toBe('precheck')
+    expect(abandon.props.reason).toBe('reset')
+    expect(typeof abandon.props.durationMs).toBe('number')
+  })
+
+  it('does NOT emit session_abandon after a completed session (no double terminal event)', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const sid = useLearningStore.getState().sessionId
+    useLearningStore.setState({ currentStep: 'step4' })
+    await useLearningStore.getState().complete()
+    useLearningStore.getState().reset()   // reset after complete
+
+    const abandons = mem.events.filter((e) => e.sessionId === sid && e.name === 'session_abandon')
+    expect(abandons).toHaveLength(0)
+  })
+
+  it('emits session_abandon(restart) when a new session starts over a live one', async () => {
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    useLearningStore.getState().advanceFromEmpathy()
+    const firstSid = useLearningStore.getState().sessionId
+    useLearningStore.getState().startCustom('새 세션')   // restart over live
+
+    const abandon = mem.events.find((e) => e.sessionId === firstSid && e.name === 'session_abandon')!
+    expect(abandon).toBeDefined()
+    expect(abandon.props.reason).toBe('restart')
+    expect(abandon.props.lastStep).toBe('precheck')
+  })
+
+  it('abandonIfActive is a no-op when no session is active', () => {
+    useLearningStore.getState().reset()        // no live session
+    const before = mem.events.length
+    useLearningStore.getState().abandonIfActive('hidden')
+    expect(mem.events.length).toBe(before)
+  })
 })
