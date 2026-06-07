@@ -108,6 +108,15 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     }
   }
 
+  // Single dwell source: emit step_dwell for the step being LEFT, then move.
+  const transitionTo = (step: V9Step) => {
+    const s = get()
+    if (s.sessionId && s.stepEnteredAt != null) {
+      track('step_dwell', { step: s.currentStep, dwellMs: Date.now() - s.stepEnteredAt }, s.sessionId)
+    }
+    set({ currentStep: step, stepEnteredAt: Date.now() })
+  }
+
   return {
     ...initial,
 
@@ -155,13 +164,13 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceFromEmpathy() {
-      set({ currentStep: 'precheck' })
+      transitionTo('precheck')
     },
 
     submitPrecheck(choiceId) {
       set({ precheckChoice: choiceId })
       setTimeout(() => {
-        if (get().currentStep === 'precheck') set({ currentStep: 'step0' })
+        if (get().currentStep === 'precheck') transitionTo('step0')
       }, 400)
     },
 
@@ -170,7 +179,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep1() {
-      set({ currentStep: 'step1' })
+      transitionTo('step1')
     },
 
     tapBlock(blockId) {
@@ -193,14 +202,14 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep2() {
-      set({ currentStep: 'step2' })
+      transitionTo('step2')
     },
 
     async advanceToStep3() {
       const s = get()
       if (!s.payload) return
       if (s.patternSaved) {
-        set({ currentStep: 'step3' })
+        transitionTo('step3')
         return
       }
       const pattern: Pattern = {
@@ -217,7 +226,8 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         lastReviewedAt: null,
       }
       await db.savePattern(pattern)
-      set({ patternSaved: true, currentStep: 'step3' })
+      set({ patternSaved: true })
+      transitionTo('step3')
     },
 
     submitAfterChoice(id) {
@@ -225,7 +235,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     advanceToStep4() {
-      set({ currentStep: 'step4' })
+      transitionTo('step4')
     },
 
     async complete() {

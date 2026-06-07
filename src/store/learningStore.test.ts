@@ -391,4 +391,37 @@ describe('learningStore event tracking', () => {
     const start = sessionEvents().find((e) => e.name === 'session_start')!
     expect(start.props).toEqual({ source: 'scenario', scenarioId: 's1' })
   })
+
+  it('emits step_dwell for each step left, in order, never for input or step4', async () => {
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().payloadStatus).toBe('ready')
+    })
+    const payload = useLearningStore.getState().payload!
+    const order = [...payload.assembly.blocks].sort((a, b) => a.order - b.order).map((b) => b.id)
+    const conn = payload.assembly.connectors.find((c) => c.isCorrect)!.id
+
+    useLearningStore.getState().advanceFromEmpathy()
+    useLearningStore.getState().submitPrecheck('first')
+    await vi.waitFor(() => {
+      expect(useLearningStore.getState().currentStep).toBe('step0')
+    })
+    useLearningStore.getState().advanceToStep1()
+    order.forEach((id) => useLearningStore.getState().tapBlock(id))
+    useLearningStore.getState().tapConnector(conn)
+    useLearningStore.getState().advanceToStep2()
+    await useLearningStore.getState().advanceToStep3()
+    useLearningStore.getState().advanceToStep4()
+
+    const dwellSteps = sessionEvents()
+      .filter((e) => e.name === 'step_dwell')
+      .map((e) => e.props.step)
+    expect(dwellSteps).toEqual(['empathy', 'precheck', 'step0', 'step1', 'step2', 'step3'])
+
+    for (const e of sessionEvents().filter((e) => e.name === 'step_dwell')) {
+      expect(typeof e.props.dwellMs).toBe('number')
+      expect(e.props.dwellMs as number).toBeGreaterThanOrEqual(0)
+    }
+  })
 })
