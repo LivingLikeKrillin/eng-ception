@@ -1,9 +1,11 @@
 # Eng-ception v9 — 5형식 축 (5H Axis) Design
 
+> **Revision (2026-06-07):** Listening mode dropped (moves to the separate `engul` product; podcast copyright risk). eng-ception is **text-only speaking & English-thinking training**, shipped as a **web PWA** (RN deferred). No in-app audio/TTS. §10 and the cross-mode parts of §12 are obsolete; under-represented patterns are covered by curated scenarios (§12.4).
+>
 > **Status**: Design (pending review + user approval)
 > **Date**: 2026-05-08
 > **Author**: collaborative (Eisen + Claude)
-> **Scope**: Redesign the speaking training flow with the 5형식 (English syntactic patterns) axis as a first-class dimension, replacing the v8 implementation. Aligns with the parallel listening training spec (Mode B).
+> **Scope**: Redesign the speaking training flow with the 5형식 (English syntactic patterns) axis as a first-class dimension, replacing the v8 implementation. ~~Aligns with the parallel listening training spec (Mode B).~~ (listening dropped — see revision above)
 > **Supersedes**: `2026-04-14-v8-learning-journey-port-design.md`
 
 ---
@@ -39,8 +41,7 @@ The shift isn't cosmetic. v8 was structurally a "translate the meaning" tool. v9
 
 ### 1.4 Strategic context
 
-- **Sister spec**: `2026-05-01-listening-incrementality-design.md` (listening Mode B) uses the same 5형식 axis. Pause-and-Predict positions are placed at 5형식 trigger verbs.
-- **Cross-mode loop**: Listening surfaces a 5형식 pattern → user encounters it again in speaking training via the queue model.
+- ~~**Sister spec** / **Cross-mode loop** (listening Mode B)~~ — **Listening dropped (2026-06-07).** Audio/listening moved to the separate `engul` product; the listening spec is deprecated. Under-represented patterns are covered by curated scenarios (§12.4); a future post-v9 SRS soft-bias adds coverage. The cross-mode loop is obsolete.
 - **PR #3 (v8 implementation) is closed**. v9 starts fresh from master.
 
 ---
@@ -54,7 +55,7 @@ The shift isn't cosmetic. v8 was structurally a "translate the meaning" tool. v9
 - Use the 5형식 axis to categorize saved Patterns and shape Patterns library navigation
 - Track per-pattern proficiency in `LearningRecord` for future diagnostic dashboards
 - Keep the 7-step v8 flow shape (Empathy → Pre-check → Step 0..4) but reflow Step 0 and Step 2 around the syntactic comparison
-- Maintain platform-agnostic TS layers (types, store, services, prompts, mocks, validate) for RN port
+- Maintain platform-agnostic TS layers (types, store, services, prompts, mocks, validate) for future reuse (web PWA is the current target; eases an RN port if ever pursued)
 
 ### Non-goals
 
@@ -62,7 +63,7 @@ The shift isn't cosmetic. v8 was structurally a "translate the meaning" tool. v9
 - **Comprehensive verb coverage**: We curate 17 verbs across 7 patterns. Edge-case verbs (deem, perceive, regard) are intentionally excluded — mastery beats coverage.
 - **State change copulas (become/get/turn + Adj)**: Belongs to a separate "어휘 nuance" axis, not 5형식. Out of scope for v9.
 - **Voice / phonology training**: Future scope.
-- **Stall classification in speaking mode**: Listening spec handles stall tracking. Speaking mode tracks `assemblyCorrect` per pattern.
+- **Stall classification**: Out of scope (was a listening-mode concept — listening dropped). Speaking mode tracks `assemblyCorrect` per pattern.
 
 ---
 
@@ -364,19 +365,13 @@ Future "내 회로 진단" view can show per-pattern progress:
 ...
 ```
 
-This becomes the unified diagnostic across speaking + listening (listening's prediction quizzes also tag results by `pattern5hId`).
+This becomes the speaking diagnostic ("내 회로 진단"), per pattern. (Originally framed as cross-mode with listening — listening dropped 2026-06-07, so it is speaking-only.)
 
 ---
 
-## 10. Listening spec alignment
+## 10. Listening spec alignment — OBSOLETE (listening dropped 2026-06-07)
 
-The listening Mode B spec (`2026-05-01-listening-incrementality-design.md`) needs minor updates to align with v9:
-
-1. `PredictionQuiz` adds `patternId: Pattern5HId` — server places quizzes at 5형식 trigger verb positions
-2. `ListeningPattern.template` adds `patternId: Pattern5HId`
-3. Phase 3 "speaking bridge" passes `patternId` through the queue model so the resulting speaking session uses the same pattern
-
-These updates are documented in a v9 amendment to that spec (separate document).
+Listening mode has been dropped from eng-ception (audio/listening moves to the separate `engul` product; podcasts also carry copyright risk). `Pattern5HId` is now **owned and used by speaking only**. The former alignment items (`PredictionQuiz.patternId`, `ListeningPattern.template.patternId`, the Phase 3 speaking bridge) no longer apply. The listening spec is retained for history only — see its deprecation banner.
 
 ---
 
@@ -395,7 +390,9 @@ v9 is a fresh build on master. Suggested chunk order (formalize in a plan docume
 
 ## 12. Mode-specific pattern emphasis
 
-The 7-pattern taxonomy is **shared between speaking and listening modes**, but the natural distribution of patterns differs by mode. This is not a bug — it reflects how the two modes naturally surface different speech styles.
+> **Revision (2026-06-07):** Listening mode was dropped (audio/listening moves to the separate `engul` product; podcasts also carry copyright risk). eng-ception is text-only speaking & English-thinking training, shipped as a **web PWA** (RN deferred). The cross-mode (listening↔speaking) coverage mechanism below is obsolete; under-represented patterns are covered by curated scenarios (§12.4). §12.1 and §12.4 remain valid.
+
+The 7-pattern taxonomy was originally intended to be shared between speaking and listening, but with listening dropped, **speaking owns the full taxonomy**. The natural speaking distribution still skews toward reflective patterns (§12.1), which curated scenarios (§12.4) deliberately counterbalance.
 
 ### 12.1 Speaking mode bias: reflective patterns
 
@@ -407,24 +404,13 @@ User-initiated speaking sessions (custom input + reflective scenarios) naturally
 
 These 4 patterns will dominate speaking session distribution. **This is acceptable** because users come to the app to express the language they're already thinking in — and Korean reflective speech compresses naturally into these patterns.
 
-### 12.2 Listening mode coverage: full 7 patterns
+### 12.2 Under-represented patterns: covered by curated scenarios
 
-Curated podcast content (Hidden Brain, Radiolab) naturally produces all 7 patterns because:
-- `perception` (saw him cry, heard her say) — narrative storytelling
-- `ditransitive` (tell me the truth, give us a chance) — dialog and direct address
-- `causative-toV` (got him to admit, tried to get her to call) — goal-oriented language
+The 3 patterns that rarely appear in reflective self-talk — `perception` (saw him cry), `ditransitive` (tell me the truth), `causative-toV` (got him to admit) — were originally meant to surface through listening content. **Listening was dropped (2026-06-07);** these patterns are now covered entirely by **curated seed scenarios** deliberately authored for them (§12.4), so speaking-only still trains all 7 patterns.
 
-Listening mode is where users gain exposure to the 3 patterns that rarely appear in their own reflective speech.
+### 12.3 Reinforcement without a cross-mode loop — OBSOLETE
 
-### 12.3 Cross-mode reinforcement
-
-Patterns surfaced in listening flow into speaking via the queue model (defined in listening spec §5.3). This means:
-- User encounters `perception` pattern in a Hidden Brain segment
-- Pattern enters speaking queue with `patternId: 'perception'` + Korean bridge
-- Next Home visit, user runs a speaking session that uses `perception`
-- User's reflective speech vocabulary expands beyond the natural 4-pattern bias
-
-This is the strategic loop. Speaking mode alone would never get the user to fluency on all 7 patterns. The cross-mode loop is the mechanism.
+The original cross-mode loop (listening surfaces a pattern → queues into speaking) is dropped along with listening mode. Speaking-only coverage now relies on (a) curated scenarios spanning all 7 patterns (§12.4), and (b) a future SRS soft-bias that hints due `(patternId, verb)` cards into Claude's session generation (post-v9; see plan "Deferred to post-v9"). There is no listening dependency.
 
 ### 12.4 Scenario seed expansion
 
@@ -434,7 +420,7 @@ Speaking seed scenarios are expanded from 10 → 15:
 - s13~s14: `perception` scenarios (목격, 우연한 청취)
 - s15: `causative-toV` scenario (설득의 결과)
 
-This ensures speaking sessions can train all 7 patterns even before listening mode is live, and seeds the SRS library with all categories represented.
+This ensures speaking sessions train all 7 patterns with no listening mode, and seeds the future SRS library with all categories represented.
 
 ---
 
@@ -445,7 +431,7 @@ This ensures speaking sessions can train all 7 patterns even before listening mo
 | Q1 | Is `pattern5h` required in every session? | **(a) Always required.** Claude must map to one of the 7 patterns. | Optional would let Claude take the easy path too often → 5형식 exposure drops. Weak matches still teach (사용자가 "이건 굳이 5형식 안 써도 되는구나" 인지). Diagnostic consistency. Tone caveat: weak matches must phrase `whyAwkward` honestly ("이건 3형식도 자연스러워. 다만 5형식으로 가면..."). |
 | Q2 | Comparison card: always or conditional? | **(b) Conditional via `comparison.show: boolean`.** | Forcing 3형식-awkward content on weak matches breaks trust. When shown, impact is high ("이건 진짜 5형식이 자연스러운 경우구나"). Claude decides per session. |
 | Q3 | Add "잘 모르겠어" 3rd option to patternQuiz? | **(b) Add it.** Visually de-emphasized (text-t3, small). | 2-option forces guessing → no learning. "잘 모르겠어" signals "this pattern needs more exposure", feeds diagnostic. De-emphasis prevents abuse as escape hatch. |
-| Q4 | Show pattern's other verbs on Step 3? | **(a) Always show.** Main verb bold, others in text-t3. | Step 3 is the strong "what I learned" moment. Showing the pattern family (max 5 verbs) accelerates verb-pattern generalization. Low cognitive cost. Aligns with cross-mode loop. |
+| Q4 | Show pattern's other verbs on Step 3? | **(a) Always show.** Main verb bold, others in text-t3. | Step 3 is the strong "what I learned" moment. Showing the pattern family (max 5 verbs) accelerates verb-pattern generalization. Low cognitive cost. |
 | Q5 | Saved Pattern template: verb-agnostic or verb-specific? | **(b) Verb-specific.** ("I made him angry") | Concrete recall is what produces speech automaticity. Abstract grouping is provided by Patterns page (auto-groups by patternId). Dedup: same patternId + same triggerVerb increments save count, doesn't create duplicate card. |
 
 ---
@@ -490,7 +476,7 @@ Before finalizing the 7-pattern taxonomy, we mapped each of the existing 10 seed
 
 ### A.4 Decisions taken
 
-- **Keep all 7 patterns** (validated by listening mode coverage)
+- **Keep all 7 patterns** (validated by curated scenario coverage)
 - **Add 5 new seed scenarios** (s11~s15) covering the 3 underrepresented patterns
 - **Document the mode-specific emphasis** (§12) so the asymmetry is intentional, not a defect
 - **Mark the comparison card content quality** (Q2 in open questions) as a key prompt engineering concern

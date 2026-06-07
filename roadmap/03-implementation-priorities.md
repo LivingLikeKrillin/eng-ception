@@ -1,5 +1,7 @@
 # Eng-ception 구현 우선순위 및 위험 관리
 
+> **⛔ SUPERSEDED (2026-06-07).** RN/Firebase/듣기 전제의 pre-v9 계획. 현재: 웹 PWA, 말하기 단일 모드 — 듣기·TTS·음성녹음·인앱결제는 범위 밖. 현재 소스-오브-트루스: v9 스펙 `2026-05-08-v9-5h-axis-design.md` + 플랜 `2026-05-08-v9-5h-axis-port.md`. 역사 기록용.
+
 > MVP → Core → Growth → Scale 단계별 우선순위 정의 및 의존성 맵
 
 ---

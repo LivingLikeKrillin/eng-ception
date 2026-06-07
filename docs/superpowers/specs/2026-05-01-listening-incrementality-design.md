@@ -1,9 +1,11 @@
 # Eng-ception Listening Incrementality Training — Design
 
-> **Status**: Design (pending spec review + user approval)
+> **⛔ DEPRECATED / DROPPED (2026-06-07).** Listening mode is no longer part of eng-ception. Audio / listening / dictation training moves to a separate product (`engul`); curated podcasts (Hidden Brain, Radiolab) also carry copyright risk. eng-ception is now a **text-only speaking & English-thinking trainer**, shipped as a web PWA. This document is retained for history only — **do NOT implement**. The under-represented 5형식 patterns this mode was meant to surface (perception / ditransitive / causative-toV / causative-result) are instead covered in speaking via curated seed scenarios (see v9 spec §12.4). The §12 v9 amendment below is likewise obsolete.
+>
+> **Status**: ~~Design (pending spec review + user approval)~~ — **Dropped**
 > **Date**: 2026-05-01
 > **Author**: collaborative (Eisen + Claude)
-> **Scope**: Add a second training mode ("Mode B: Listening") to Eng-ception that targets the same core problem — breaking the Korean batch-processing habit — from the input (listening) side, complementing the existing output (speaking) training.
+> **Scope**: ~~Add a second training mode ("Mode B: Listening") to Eng-ception...~~ (dropped — see banner above)
 
 ---
 
