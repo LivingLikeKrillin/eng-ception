@@ -55,8 +55,11 @@ export function registerAuthReaction(): () => void {
           // append-only, disposable telemetry (spec 4.4/5) — deliberately NOT migrated.
           await migrateToCloud(localStorageAdapter, cloud)
           migratedUid = user.uid
-        } catch {
-          // merge failed — stay on local; do not swap (no data loss)
+        } catch (err) {
+          // merge failed — stay on local; do not swap (no data loss). Log it: the user's
+          // auth state still flips to signed-in (AuthControl subscribes independently), so
+          // without this a failed sync is an undebuggable split-brain in the field.
+          console.error('[auth] cloud merge failed; staying on local store', err)
           return
         }
       }
