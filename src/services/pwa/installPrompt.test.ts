@@ -75,6 +75,17 @@ describe('installPrompt', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
+  it('appinstalled clears canInstall and persists dismissal (never resurfaces)', async () => {
+    const m = await import('./installPrompt')
+    m.registerInstallPrompt()
+    fire('beforeinstallprompt', { preventDefault() {}, prompt: async () => {}, userChoice: Promise.resolve({ outcome: 'accepted' }) })
+    expect(m.getInstallState().canInstall).toBe(true)
+    fire('appinstalled', {})
+    const s = m.getInstallState()
+    expect(s.canInstall).toBe(false)
+    expect(s.dismissed).toBe(true)
+  })
+
   it('detects iOS Safari (no beforeinstallprompt path)', async () => {
     vi.unstubAllGlobals()
     const store = new Map<string, string>()

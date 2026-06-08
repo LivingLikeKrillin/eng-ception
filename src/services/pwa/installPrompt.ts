@@ -20,6 +20,9 @@ export function registerInstallPrompt(): void {
   })
   window.addEventListener('appinstalled', () => {
     deferred = null
+    // Persist dismissal too: once installed, never resurface the banner (even if a
+    // future change re-derives canInstall). Belt-and-suspenders with the canInstall gate.
+    try { localStorage.setItem(DISMISS_KEY, '1') } catch { /* best-effort */ }
     notify()
   })
 }

@@ -235,15 +235,15 @@ npm run dev:api    # API 프록시 서버 (Express, port 3001, --env-file=.env.l
 npm run build      # 프로덕션 빌드 (tsc -b && vite build)
 npm run lint       # ESLint 실행
 npm run preview    # 빌드 결과 미리보기
-npm run test       # Vitest 단위/통합 (= vitest run, 94 pass | 9 skip)
+npm run test       # Vitest 단위/통합 (= vitest run, 95 pass | 9 skip)
 npm run test:watch # Vitest watch
 npm run test:e2e   # Playwright e2e (mock 모드, vite strict port 5219)
-npm run test:emulator # Firestore 어댑터 + 룰 테스트 (Java 필요; firebase emulators:exec 자동 기동, 7 tests)
+npm run test:emulator # Firestore 어댑터 + 룰 + 로그인 데이터흐름 (Java 필요; firebase emulators:exec 자동 기동, 9 tests)
 ```
 
 **개발 시:** mock 모드(`VITE_USE_MOCK=true`)면 `npm run dev`만으로 충분. 실 Claude API를 쓰려면 `VITE_USE_MOCK=false` + `npm run dev:api` 동시 실행.
 
-**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (94 pass | 9 skip) · `npm run lint` · `npm run build` (PWA 아티팩트 — manifest+SW+precache 생성 확인) · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 — 기본 카운트엔 미포함).
+**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (95 pass | 9 skip) · `npm run lint` · `npm run build` (PWA 아티팩트 — manifest+SW+precache 생성 확인) · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 9 — 기본 카운트엔 미포함).
 
 ## 환경 변수
 
