@@ -6,10 +6,12 @@ import type { Scenario } from '../types'
 import ScenarioCard from '../components/home/ScenarioCard'
 import RecentLearning from '../components/home/RecentLearning'
 import AuthControl from '../components/common/AuthControl'
+import InstallBanner from '../components/common/InstallBanner'
 
 export default function Home() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [quickInput, setQuickInput] = useState('')
+  const [hasCompletedSession, setHasCompletedSession] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,6 +22,8 @@ export default function Home() {
       }
       const unlearned = await db.getUnlearnedScenarios(3)
       setScenarios(unlearned)
+      const records = await db.getLearningRecords()
+      setHasCompletedSession(records.length > 0)
     }
     load()
   }, [])
@@ -110,6 +114,11 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Install prompt — after the user has completed at least one session */}
+        <div className="mt-8">
+          <InstallBanner hasCompletedSession={hasCompletedSession} />
+        </div>
 
         {/* Recent */}
         <div className="fu3 mt-8">

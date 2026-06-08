@@ -8,9 +8,11 @@ import { localAnalyticsSink } from './store/localAnalyticsSink'
 import { registerAnalyticsLifecycle } from './services/analyticsLifecycle'
 import { isFirebaseConfigured } from './services/firebase'
 import { registerAuthReaction } from './store/auth'
+import { registerInstallPrompt } from './services/pwa/installPrompt'
 
 async function bootstrap() {
   await db.init()
+  registerInstallPrompt()
 
   // Telemetry: default facade sink is noop; wire the local ring buffer unless disabled.
   if (import.meta.env.VITE_DISABLE_ANALYTICS !== 'true') {
