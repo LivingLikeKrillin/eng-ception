@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "generate-pwa-assets": "npx -y @vite-pwa/assets-generator@1",
+    "generate-pwa-assets": "npx @vite-pwa/assets-generator@1.0.2",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
