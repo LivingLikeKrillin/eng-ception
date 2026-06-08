@@ -10,17 +10,28 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
+        id: '/',
         name: 'Eng-ception',
         short_name: 'Eng-ception',
-        description: '한국어 사고를 영어 발화 구조로 재구성하는 훈련 앱',
+        description: '한국어 사고를 자연스러운 영어 구문으로 재배치하는 5형식 훈련 앱',
+        lang: 'ko',
+        categories: ['education'],
         theme_color: '#111113',
         background_color: '#111113',
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: '/logo.png', sizes: 'any', type: 'image/png' },
-          { src: '/logo.png', sizes: 'any', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+      },
+      workbox: {
+        // The Claude proxy is same-origin: keep the SPA navigate-fallback from serving
+        // index.html for /api requests. (Firestore/Auth are cross-origin googleapis —
+        // outside same-origin navigate-fallback and matched by no runtime rule, so they
+        // pass through uncached; no rule needed.)
+        navigateFallbackDenylist: [/^\/api/],
       },
     }),
   ],
