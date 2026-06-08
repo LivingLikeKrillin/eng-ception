@@ -74,14 +74,14 @@ The install-prompt logic is one self-contained module (no store, no Firebase/ana
 - Close (✕) → `dismissInstall()` + hide. Tailwind, matches the rounded-pill/`bg-c`/`pressable` house style.
 
 ### 4.3 `pages/Home.tsx` — host
-- Renders `<InstallBanner hasCompletedSession={records.length > 0} />` (Home already loads records via `db`/`RecentLearning`; pass the count it already has, or read once). Minimal change.
+- Renders `<InstallBanner hasCompletedSession={...} />`. **Note:** Home does *not* currently load learning records — only scenarios; the record fetch lives inside the child `RecentLearning`. So the plan must add a small `db.getLearningRecords()` (or a count) read in Home's existing `useEffect` and pass `records.length > 0`. (Don't lift `RecentLearning`'s fetch — a second lightweight read is simpler and keeps that component self-contained.)
 
 ### 4.4 `vite.config.ts` — manifest + workbox
 - `manifest`: replace icons with the generated set (192, 512 `any`, 512 `maskable`), v9 `description` ("한국어 사고를 자연스러운 영어 구문으로 재배치하는 5형식 훈련 앱"), add `lang: 'ko'`, `categories: ['education']`, `id: '/'`. Keep `theme_color`/`background_color`/`display: 'standalone'`/`start_url`.
 - `workbox.navigateFallbackDenylist: [/^\/api/]` so the SPA navigate-fallback never serves `index.html` for the Claude proxy. (Firestore/Auth are cross-origin `googleapis.com` — outside same-origin navigate-fallback and matched by no runtime-caching rule, so they pass through uncached; documented, no rule needed.)
 
 ### 4.5 `index.html` — iOS meta
-- `lang="ko"`; add `apple-mobile-web-app-capable="yes"`, `apple-mobile-web-app-status-bar-style="black-translucent"` (matches `#111113`), `apple-mobile-web-app-title="Eng-ception"`; point `apple-touch-icon` at the generated 180 asset.
+- `lang="ko"`; add `apple-mobile-web-app-capable="yes"`, `apple-mobile-web-app-status-bar-style="black"` (opaque black bar — matches the `#111113` theme without rendering content *under* the status bar, which `black-translucent` would and which we'd otherwise have to absorb with safe-area padding), `apple-mobile-web-app-title="Eng-ception"`; point `apple-touch-icon` at the generated 180 asset.
 
 ### 4.6 `pwa-assets.config.ts` + generated `public/` icons
 - `@vite-pwa/assets-generator` config using `public/logo.png` as source, a preset producing 64/192/512 + **maskable with safe-zone padding** (so Android masks don't clip the logo) + apple-touch-180. Run via an `npm run` script; commit the generated PNGs.
@@ -107,9 +107,10 @@ Install capture is a one-time global concern: `registerInstallPrompt()` runs onc
 
 ## 8. Dependencies & build
 
-- New devDependency: `@vite-pwa/assets-generator`. New script: `"generate-pwa-assets": "pwa-assets-generator"`.
+- New devDependency: `@vite-pwa/assets-generator`. New script: `"generate-pwa-assets": "pwa-assets-generator"` (the CLI auto-discovers `pwa-assets.config.ts`, no `-c` flag needed).
 - No runtime dependency added (`vite-plugin-pwa` already present).
 - Generated icon PNGs are committed to `public/`.
+- **Ordering:** `generate-pwa-assets` must run (and the PNGs be committed) **before** `vite build` — the manifest references the generated files by path, so a build without them would emit a manifest pointing at missing icons. The build-verification test (§7) therefore also asserts the referenced icon files physically exist in `dist/`.
 
 ## 9. Scope summary
 
