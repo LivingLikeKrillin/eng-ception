@@ -55,7 +55,9 @@ eng-ception/
 │   │   ├── analytics.ts          # track() 파사드 — swappable AnalyticsSink + dev egress
 │   │   ├── analyticsLifecycle.ts # visibilitychange → session_abandon(hidden)
 │   │   ├── firebase.ts           # Firebase 단일 init + isFirebaseConfigured() 게이트 + 에뮬레이터 연결
-│   │   └── migrateToCloud.ts     # 로그인 시 로컬→Firestore 비파괴 union 병합 + 조건부 로컬 클리어
+│   │   ├── migrateToCloud.ts     # 로그인 시 로컬→Firestore 비파괴 union 병합 + 조건부 로컬 클리어
+│   │   └── pwa/
+│   │       └── installPrompt.ts  # beforeinstallprompt 캡처 + 설치 상태/iOS Safari 감지 + dismiss 영속화
 │   ├── store/
 │   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화)
 │   │   ├── db.ts                 # 스왑 가능한 db 파사드 + setDbAdapter (setSink 평행; 7 소비자가 import)
@@ -75,7 +77,8 @@ eng-ception/
 │       ├── common/
 │       │   ├── Navigation.tsx    # 하단 탭 네비게이션
 │       │   ├── ProgressBar.tsx   # step0~step4 진행률 표시
-│       │   └── AuthControl.tsx   # 구글 로그인/로그아웃 (미설정 시 null 렌더; Home 헤더)
+│       │   ├── AuthControl.tsx   # 구글 로그인/로그아웃 (미설정 시 null 렌더; Home 헤더)
+│       │   └── InstallBanner.tsx # PWA 설치 배너 (안드로이드/데스크톱 버튼 + iOS 힌트, dismiss; ≥1 완료 세션 후 Home)
 │       ├── home/
 │       │   ├── ScenarioCard.tsx
 │       │   └── RecentLearning.tsx
@@ -101,6 +104,8 @@ eng-ception/
 ├── .firebaserc                   # 기본 프로젝트 demo-eng-ception (demo- 접두사 → 실 클라우드 불필요)
 ├── firestore.rules               # 보안 규칙 — /users/{uid}/** 본인만 read/write
 ├── playwright.config.ts          # e2e — vite strict port 5219, mock 모드
+├── pwa-assets.config.ts          # @vite-pwa/assets-generator 설정 (logo.png → 아이콘 세트)
+├── public/                       # 생성된 PWA 아이콘 (pwa-64/192/512, maskable-512, apple-touch-180, favicon.ico) + logo.png
 ├── vite.config.ts                # Vite + PWA + Tailwind 설정
 └── tsconfig.json                 # 루트는 files:[]+references (→ `tsc -b` 로 빌드, `--noEmit` 아님)
 ```
@@ -203,6 +208,15 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 - **보안 규칙:** `firestore.rules` — `/users/{uid}/**` 본인만 read/write. **에뮬레이터 우선 개발:** `firebase.json`/`.firebaserc`(demo-eng-ception, 실 클라우드 불필요). `npm run test:emulator`(Java 필요)는 `firebase emulators:exec`로 자동 기동, 게이트는 `FIRESTORE_EMULATOR_HOST`(exec가 set) — 잘못 돌려도 깨끗이 skip.
 - **phase 2 (이번 범위 밖):** 카카오 로그인(Firebase 네이티브 미지원 → custom-token Cloud Function + Blaze), Cloud Functions 전반, 프로덕션 프로비저닝(체크리스트는 spec §10). 설계: `docs/superpowers/specs/2026-06-07-firebase-migration-design.md`, 계획: `docs/superpowers/plans/2026-06-07-firebase-migration.md`.
 
+## PWA
+
+범위 = **설치 경험(install experience) + 앱-쉘(app-shell) 캐싱**. 딥 오프라인(세션 데이터 오프라인 동작)·폰트 캐싱은 범위 밖.
+
+- **아이콘:** `@vite-pwa/assets-generator`가 `logo.png`에서 아이콘 세트를 생성 (`pwa-assets.config.ts`). 빌드 전 `npm run generate-pwa-assets`를 한 번 돌려 `public/`에 산출물(pwa-64/192/512, maskable-512, apple-touch-180, favicon.ico) 갱신. manifest + iOS standalone meta는 `vite.config.ts`/`index.html`에 연결.
+- **설치 프롬프트:** `services/pwa/installPrompt.ts`가 `beforeinstallprompt`를 캡처(`registerInstallPrompt()`는 `main.tsx` 부트스트랩에서 `db.init()` 직후 1회) → mini-infobar 억제 후 자체 UI로 구동. `InstallBanner`(`components/common/`)는 **≥1 완료 세션 후** Home에 표시(안드로이드/데스크톱은 프롬프트 버튼, iOS Safari는 "공유 → 홈 화면에 추가" 힌트). dismiss는 `eng-ception:install-dismissed`로 영속화; standalone 실행 중엔 숨김. PIPA-safe (콘텐츠 없음).
+- **서비스 워커:** `vite-plugin-pwa`(Workbox)는 **빌드/preview 전용** (dev에선 비활성). `navigateFallbackDenylist:[/api]` + Firestore/Auth는 passthrough (캐시 안 함).
+- 설계: `docs/superpowers/specs/2026-06-08-pwa-design.md`.
+
 ## 개발 컨벤션
 
 - TypeScript strict 모드
@@ -221,7 +235,7 @@ npm run dev:api    # API 프록시 서버 (Express, port 3001, --env-file=.env.l
 npm run build      # 프로덕션 빌드 (tsc -b && vite build)
 npm run lint       # ESLint 실행
 npm run preview    # 빌드 결과 미리보기
-npm run test       # Vitest 단위/통합 (= vitest run, 89 tests + 7 emulator-gated skip)
+npm run test       # Vitest 단위/통합 (= vitest run, 94 pass | 9 skip)
 npm run test:watch # Vitest watch
 npm run test:e2e   # Playwright e2e (mock 모드, vite strict port 5219)
 npm run test:emulator # Firestore 어댑터 + 룰 테스트 (Java 필요; firebase emulators:exec 자동 기동, 7 tests)
@@ -229,7 +243,7 @@ npm run test:emulator # Firestore 어댑터 + 룰 테스트 (Java 필요; fireba
 
 **개발 시:** mock 모드(`VITE_USE_MOCK=true`)면 `npm run dev`만으로 충분. 실 Claude API를 쓰려면 `VITE_USE_MOCK=false` + `npm run dev:api` 동시 실행.
 
-**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (89 pass + 7 emulator-gated skip) · `npm run lint` · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 — 기본 카운트엔 미포함).
+**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (94 pass | 9 skip) · `npm run lint` · `npm run build` (PWA 아티팩트 — manifest+SW+precache 생성 확인) · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 — 기본 카운트엔 미포함).
 
 ## 환경 변수
 
