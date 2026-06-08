@@ -212,7 +212,7 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 
 범위 = **설치 경험(install experience) + 앱-쉘(app-shell) 캐싱**. 딥 오프라인(세션 데이터 오프라인 동작)·폰트 캐싱은 범위 밖.
 
-- **아이콘:** `@vite-pwa/assets-generator`가 `logo.png`에서 아이콘 세트를 생성 (`pwa-assets.config.ts`). 빌드 전 `npm run generate-pwa-assets`를 한 번 돌려 `public/`에 산출물(pwa-64/192/512, maskable-512, apple-touch-180, favicon.ico) 갱신. manifest + iOS standalone meta는 `vite.config.ts`/`index.html`에 연결.
+- **아이콘:** `@vite-pwa/assets-generator`가 `logo.png`에서 아이콘 세트를 생성 (`pwa-assets.config.ts`). 로고 바뀔 때만 `npm run generate-pwa-assets`(= `npx -y @vite-pwa/assets-generator@1`, **on-demand** — 프로젝트 devDep 아님; vite-plugin-pwa의 peer `^0.2.6`과 충돌해 `npm ci`가 깨지던 걸 회피)로 `public/` 산출물(pwa-64/192/512, maskable-512, apple-touch-180, favicon.ico) 갱신 후 커밋. 산출물이 커밋돼 있어 빌드/dev/test는 이 도구 불필요. manifest + iOS standalone meta는 `vite.config.ts`/`index.html`에 연결.
 - **설치 프롬프트:** `services/pwa/installPrompt.ts`가 `beforeinstallprompt`를 캡처(`registerInstallPrompt()`는 `main.tsx` 부트스트랩에서 `db.init()` 직후 1회) → mini-infobar 억제 후 자체 UI로 구동. `InstallBanner`(`components/common/`)는 **≥1 완료 세션 후** Home에 표시(안드로이드/데스크톱은 프롬프트 버튼, iOS Safari는 "공유 → 홈 화면에 추가" 힌트). dismiss는 `eng-ception:install-dismissed`로 영속화; standalone 실행 중엔 숨김. PIPA-safe (콘텐츠 없음).
 - **서비스 워커:** `vite-plugin-pwa`(Workbox)는 **빌드/preview 전용** (dev에선 비활성). `navigateFallbackDenylist:[/api]` + Firestore/Auth는 passthrough (캐시 안 함).
 - 설계: `docs/superpowers/specs/2026-06-08-pwa-design.md`.
