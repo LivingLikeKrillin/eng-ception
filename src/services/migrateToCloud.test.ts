@@ -24,6 +24,8 @@ function memStore(seedRecords: LearningRecord[] = [], seedPatterns: Pattern[] = 
     },
     async getPatterns() { return patterns },
     async deletePattern(id) { patterns = patterns.filter((p) => p.id !== id) },
+    async getPattern() { return null },
+    async updatePatternSchedule() {},
   }
 }
 const rec = (id: string): LearningRecord => ({

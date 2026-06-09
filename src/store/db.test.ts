@@ -28,6 +28,8 @@ function fakeAdapter(): DataStore & { calls: string[] } {
     async savePattern() { calls.push('savePattern') },
     async getPatterns() { calls.push('getPatterns'); return [] },
     async deletePattern() { calls.push('deletePattern') },
+    async getPattern() { calls.push('getPattern'); return null },
+    async updatePatternSchedule() { calls.push('updatePatternSchedule') },
   }
 }
 
@@ -71,10 +73,12 @@ describe('db facade', () => {
     await db.savePattern({} as never)
     await db.getPatterns()
     await db.deletePattern('p1')
+    await db.getPattern('p', 'v')
+    await db.updatePatternSchedule('p', 'v', {})
     expect(fake.calls).toEqual([
       'init', 'getScenarios', 'getScenario', 'getUnlearnedScenarios', 'saveScenarios',
       'saveLearningRecord', 'getLearningRecords', 'deleteLearningRecord', 'savePattern',
-      'getPatterns', 'deletePattern',
+      'getPatterns', 'deletePattern', 'getPattern', 'updatePatternSchedule',
     ])
   })
 

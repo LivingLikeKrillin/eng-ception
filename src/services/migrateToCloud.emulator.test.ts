@@ -38,6 +38,8 @@ function memStore(records: LearningRecord[] = [], patterns: Pattern[] = []): Dat
     },
     async getPatterns() { return p },
     async deletePattern(id) { p = p.filter((x) => x.id !== id) },
+    async getPattern() { return null },
+    async updatePatternSchedule() {},
   }
 }
 const rec = (id: string): LearningRecord => ({

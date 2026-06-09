@@ -12,4 +12,6 @@ export interface DataStore {
   savePattern(pattern: Pattern): Promise<void>
   getPatterns(): Promise<Pattern[]>
   deletePattern(id: string): Promise<void>
+  getPattern(patternId: string, triggerVerb: string): Promise<Pattern | null>
+  updatePatternSchedule(patternId: string, triggerVerb: string, partial: Partial<Pattern>): Promise<void>
 }
