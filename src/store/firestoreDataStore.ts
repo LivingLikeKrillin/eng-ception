@@ -9,7 +9,7 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import type { DataStore } from './dataStore'
-import type { LearningRecord, Pattern } from '../types'
+import type { LearningRecord, Pattern, Capture } from '../types'
 import { seedScenarios } from '../data/seed-scenarios'
 import { withSrsDefaults } from '../services/srs'
 
@@ -18,6 +18,7 @@ const patternKey = (patternId: string, triggerVerb: string) => `${patternId}__${
 export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore {
   const recordsCol = () => collection(fs, 'users', uid, 'records')
   const patternsCol = () => collection(fs, 'users', uid, 'patterns')
+  const capturesCol = () => collection(fs, 'users', uid, 'captures')
 
   const store: DataStore = {
     async init() {
@@ -89,6 +90,17 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
     async updatePatternSchedule(patternId, triggerVerb, partial) {
       const ref = doc(patternsCol(), patternKey(patternId, triggerVerb))
       await setDoc(ref, partial, { merge: true }) // queues offline like the increment path
+    },
+
+    async saveCapture(capture) {
+      await setDoc(doc(capturesCol(), capture.id), capture) // queues offline
+    },
+    async getCaptures() {
+      const snap = await getDocs(capturesCol())
+      return snap.docs.map((d) => d.data() as Capture)
+    },
+    async deleteCapture(id) {
+      await deleteDoc(doc(capturesCol(), id))
     },
   }
 

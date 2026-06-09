@@ -28,6 +28,9 @@ vi.mock('./localStorage', () => ({
     async deleteLearningRecord() {},
     async getPattern() { return null },
     async updatePatternSchedule() {},
+    async saveCapture() {},
+    async getCaptures() { return [] },
+    async deleteCapture() {},
   },
 }))
 

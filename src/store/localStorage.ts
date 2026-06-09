@@ -1,5 +1,5 @@
 import type { DataStore } from './dataStore'
-import type { Scenario, LearningRecord, Pattern } from '../types'
+import type { Scenario, LearningRecord, Pattern, Capture } from '../types'
 import { withSrsDefaults } from '../services/srs'
 
 const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
@@ -9,9 +9,11 @@ const KEYS = {
   scenarios: 'eng-ception:scenarios',
   records: 'eng-ception:records',
   patterns: 'eng-ception:patterns',
+  captures: 'eng-ception:captures',
 } as const
 
 const MAX_RECORDS = 100
+const MAX_CAPTURES = 50
 
 // Corrupt JSON (a truncated write after a prior quota failure, tampering) must not
 // throw — init() runs in the boot path before React renders, so an unguarded
@@ -138,5 +140,20 @@ export const localStorageAdapter: DataStore = {
     if (!card) return
     Object.assign(card, partial)
     setItem(KEYS.patterns, patterns)
+  },
+
+  async saveCapture(capture) {
+    const captures = getItem<Capture>(KEYS.captures)
+    captures.push(capture)
+    if (captures.length > MAX_CAPTURES) captures.splice(0, captures.length - MAX_CAPTURES)
+    setItem(KEYS.captures, captures)
+  },
+
+  async getCaptures() {
+    return getItem<Capture>(KEYS.captures)
+  },
+
+  async deleteCapture(id) {
+    setItem(KEYS.captures, getItem<Capture>(KEYS.captures).filter((c) => c.id !== id))
   },
 }

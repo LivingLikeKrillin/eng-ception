@@ -25,6 +25,13 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Share Target (GET): the OS share sheet hands shared text to the installed PWA at
+        // /?title=&text=&url=. GET needs no service-worker fetch handler (Home reads location.search).
+        share_target: {
+          action: '/',
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' },
+        },
       },
       workbox: {
         // The Claude proxy is same-origin: keep the SPA navigate-fallback from serving
