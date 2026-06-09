@@ -36,13 +36,13 @@ function makePattern(overrides: Partial<Pattern> = {}): Pattern {
   }
 }
 
-describe('localStorageAdapter v5 migration (non-destructive)', () => {
-  it('sets schema version to 5 when none exists', async () => {
+describe('localStorageAdapter v6 migration (non-destructive)', () => {
+  it('sets schema version to 6 when none exists', async () => {
     await localStorageAdapter.init()
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('5')
+    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
   })
 
-  it('backfills FSRS defaults onto existing patterns and KEEPS records on v4->v5', async () => {
+  it('backfills FSRS defaults + record isFiveHMoment and KEEPS records on v4->v6', async () => {
     localStorage.setItem('eng-ception:schema-version', '4')
     localStorage.setItem('eng-ception:records', '[{"id":"r1"}]')
     localStorage.setItem('eng-ception:patterns', JSON.stringify([{
@@ -53,13 +53,25 @@ describe('localStorageAdapter v5 migration (non-destructive)', () => {
 
     await localStorageAdapter.init()
 
-    expect(localStorage.getItem('eng-ception:records')).toBe('[{"id":"r1"}]') // kept
+    const records = await localStorageAdapter.getLearningRecords()
+    expect(records[0].id).toBe('r1')                 // kept
+    expect(records[0].isFiveHMoment).toBe(true)      // backfilled
     const patterns = await localStorageAdapter.getPatterns()
     expect(patterns[0].cardState).toBe('new')
     expect(patterns[0].bypassedCount).toBe(0)
     expect(patterns[0].nextDueAt).toBeNull()
     expect(patterns[0].reviewCount).toBe(2) // preserved
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('5')
+    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
+  })
+
+  it('non-destructive v5 -> v6: keeps records, backfills isFiveHMoment', async () => {
+    localStorage.setItem('eng-ception:schema-version', '5')
+    localStorage.setItem('eng-ception:records', '[{"id":"r1"}]')
+    await localStorageAdapter.init()
+    const records = await localStorageAdapter.getLearningRecords()
+    expect(records[0].id).toBe('r1')
+    expect(records[0].isFiveHMoment).toBe(true)
+    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
   })
 
   it('still clears on a pre-v4 (legacy) version', async () => {

@@ -134,9 +134,15 @@ export default function Review() {
                   className="bg-c border border-line rounded-[14px] px-4 py-3 space-y-2"
                 >
                   <p className="text-sm text-t2 leading-relaxed">{r.originalKorean}</p>
-                  <span className="inline-block text-[11px] font-medium text-accent bg-accent/[0.08] px-2 py-0.5 rounded">
-                    {PATTERN_LABEL[r.pattern5hId]} · <span className="font-en">{r.triggerVerb}</span>
-                  </span>
+                  {r.isFiveHMoment && r.pattern5hId ? (
+                    <span className="inline-block text-[11px] font-medium text-accent bg-accent/[0.08] px-2 py-0.5 rounded">
+                      {PATTERN_LABEL[r.pattern5hId]} · <span className="font-en">{r.triggerVerb}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-block text-[11px] font-medium text-t2 bg-c2 px-2 py-0.5 rounded">
+                      간결형
+                    </span>
+                  )}
                   <div className="flex justify-between items-center">
                     <p className="text-[11px] text-t3 font-en">
                       {new Date(r.completedAt).toLocaleDateString('ko-KR')}

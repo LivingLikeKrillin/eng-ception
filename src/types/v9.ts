@@ -51,8 +51,15 @@ export interface SessionPayload {
     category: string          // "업무/논리" etc.
   }
 
-  // 5형식 axis (REQUIRED — every session targets exactly one pattern)
-  pattern5h: Pattern5HMeta
+  // Recognition verdict (v9.1) — the teaching centerpiece. Is this input a "5형식 moment"
+  // (5형식 levels it up) or is a simpler form the natural/better answer? `cue` = the why.
+  recognition: {
+    isFiveHMoment: boolean
+    cue: string
+  }
+
+  // 5형식 axis — null when !isFiveHMoment (simpler form is the answer; no 5형식 to teach).
+  pattern5h: Pattern5HMeta | null
 
   empathy: {
     echo: string
@@ -70,18 +77,14 @@ export interface SessionPayload {
     coreStructure: string[]     // discourse beats
     explanation: string
 
-    // 5형식 contrast — conditional via `show`
+    // 5형식 ↔ 간결형 contrast (v9.1 — direction-agnostic). Shows BOTH renderings and which
+    // one wins here. betterChoice is consistent with recognition.isFiveHMoment (true ↔ '5h').
     comparison: {
-      show: boolean             // false when pattern fit is weak (Q2)
-      label: string             // "왜 5형식이 자연스러운가"
-      sansPattern: {
-        en: string              // "I caused his anger."
-        whyAwkward: string      // (Q1: honest tone for weak matches)
-      }
-      withPattern: {
-        en: string              // "I made him angry."
-        whyNatural: string
-      }
+      show: boolean             // false only when a contrast is pointless
+      label: string             // "5형식이 나은가, 간결형이 나은가"
+      fiveH: { en: string; note: string }     // the 5형식 rendering + note (natural OR overkill)
+      simpler: { en: string; note: string }   // the simpler rendering + note
+      betterChoice: 'fiveH' | 'simpler'        // which wins for this input
     }
 
     // Renamed from pivotQuiz. Tests recognition of the 5형식 trigger verb.
@@ -112,11 +115,12 @@ export interface SessionPayload {
     patternNote: string         // 반말 ≤80자 자동성 노트 ("이 문장에서 핵심은 'made + O + Adj'...")
   }
 
+  // The reusable 5형식 pattern to save — null when !isFiveHMoment (nothing to drill).
   pattern: {
     template: string            // verb-specific ("I made him ~")
     patternId: Pattern5HId      // links to taxonomy
     tags: string[]              // discourse tags ("회의 반대", "감정 표현"), 2..4
-  }
+  } | null
 }
 
 export interface PrecheckChoice {

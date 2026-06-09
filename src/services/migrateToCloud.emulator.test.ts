@@ -48,7 +48,7 @@ function memStore(records: LearningRecord[] = [], patterns: Pattern[] = []): Dat
 }
 const rec = (id: string): LearningRecord => ({
   id, schemaVersion: 4, scenarioId: null, originalKorean: 'x', structureTypeId: 't',
-  structureTypeLabel: 'T', pattern5hId: 'causative-bare', triggerVerb: 'make',
+  structureTypeLabel: 'T', isFiveHMoment: true, pattern5hId: 'causative-bare', triggerVerb: 'make',
   finalSentence: 's', precheckChoice: null, afterChoice: null, patternQuizCorrect: true,
   patternQuizUnsure: false, assemblyCorrect: true, completedAt: '2026-01-01T00:00:00Z',
 })

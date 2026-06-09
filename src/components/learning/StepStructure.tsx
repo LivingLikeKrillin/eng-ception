@@ -12,7 +12,7 @@ export default function StepStructure() {
   const [hinted, setHinted] = useState(false)
   if (!payload) return null
 
-  const { structure, pattern5h, structureType } = payload
+  const { structure, pattern5h, structureType, recognition } = payload
   const correctOption = structure.patternQuiz.options.find((o) => o.isCorrect)
 
   // Verb pick finalizes the quiz. `unsure` records whether the hint scaffold was used first.
@@ -33,9 +33,27 @@ export default function StepStructure() {
     <div className="space-y-6 fu">
       <OriginalCard korean={originalKorean} />
 
-      {/* Two-chip header: 5형식 axis is primary (hero), 담화 type is secondary */}
+      {/* Recognition verdict (v9.1) — is this a 5형식 moment, and why */}
+      <div
+        className={`fu1 rounded-[12px] p-3.5 border ${
+          recognition.isFiveHMoment
+            ? 'bg-accent/[0.08] border-accent/[0.20]'
+            : 'bg-c2 border-line'
+        }`}
+      >
+        <p
+          className={`text-[10px] font-semibold font-en tracking-wider uppercase mb-1.5 ${
+            recognition.isFiveHMoment ? 'text-accent' : 'text-t2'
+          }`}
+        >
+          {recognition.isFiveHMoment ? '5형식 모먼트 ✓' : '간결형이 정답 ✓'}
+        </p>
+        <p className="text-[13px] text-t2 leading-relaxed">{recognition.cue}</p>
+      </div>
+
+      {/* 5형식 패턴 hero — only when this is a 5형식 moment */}
       <div className="fu1 space-y-2.5">
-        <Pattern5HChip meta={pattern5h} hero />
+        {pattern5h && <Pattern5HChip meta={pattern5h} hero />}
         <StructureTypeChip label={structureType.label} category={structureType.category} />
       </div>
 

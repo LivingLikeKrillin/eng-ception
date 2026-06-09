@@ -18,46 +18,55 @@ export default function StepReflect() {
 
   return (
     <div className="space-y-5 fu">
-      <div className="relative bg-c rounded-[16px] p-5 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-accent to-transparent" />
-        <p className="text-[11px] font-semibold text-t3 font-en tracking-wider uppercase mb-3">
-          PATTERN SAVED
-        </p>
-        <p className="text-[18px] font-semibold font-en leading-snug mb-3">
-          {payload.pattern.template}
-        </p>
-        <p className="text-[12px] text-t3 mb-2">{pattern5h.label} · {pattern5h.structure}</p>
+      {payload.recognition.isFiveHMoment && payload.pattern && pattern5h ? (
+        <div className="relative bg-c rounded-[16px] p-5 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-accent to-transparent" />
+          <p className="text-[11px] font-semibold text-t3 font-en tracking-wider uppercase mb-3">
+            PATTERN SAVED
+          </p>
+          <p className="text-[18px] font-semibold font-en leading-snug mb-3">
+            {payload.pattern.template}
+          </p>
+          <p className="text-[12px] text-t3 mb-2">{pattern5h.label} · {pattern5h.structure}</p>
 
-        {/* Verb family — main bold, others text-t3 (Q4) */}
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          {pattern5h.verbs.map((v) => {
-            const isMain = v === pattern5h.triggerVerb
-            return (
-              <span
-                key={v}
-                className={`text-[12px] font-en px-2 py-0.5 rounded ${
-                  isMain
-                    ? 'font-bold text-accent bg-accent/[0.10]'
-                    : 'text-t3 bg-c2'
-                }`}
-              >
-                {v}
+          {/* Verb family — main bold, others text-t3 (Q4) */}
+          <div className="flex gap-1.5 flex-wrap mb-3">
+            {pattern5h.verbs.map((v) => {
+              const isMain = v === pattern5h.triggerVerb
+              return (
+                <span
+                  key={v}
+                  className={`text-[12px] font-en px-2 py-0.5 rounded ${
+                    isMain ? 'font-bold text-accent bg-accent/[0.10]' : 'text-t3 bg-c2'
+                  }`}
+                >
+                  {v}
+                </span>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-1.5 flex-wrap">
+            {payload.pattern.tags.map((tag) => (
+              <span key={tag} className="text-[11px] text-t3 bg-c2 px-2.5 py-1 rounded-md">
+                {tag}
               </span>
-            )
-          })}
+            ))}
+          </div>
         </div>
-
-        <div className="flex gap-1.5 flex-wrap">
-          {payload.pattern.tags.map((tag) => (
-            <span
-              key={tag}
-              className="text-[11px] text-t3 bg-c2 px-2.5 py-1 rounded-md"
-            >
-              {tag}
-            </span>
-          ))}
+      ) : (
+        // 간결형 세션 — 저장할 5형식 카드 없음. 인식 takeaway만.
+        <div className="relative bg-c rounded-[16px] p-5 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-t3 to-transparent" />
+          <p className="text-[11px] font-semibold text-t3 font-en tracking-wider uppercase mb-3">
+            인식 포인트
+          </p>
+          <p className="text-[16px] font-semibold leading-snug mb-3">{payload.recognition.cue}</p>
+          <p className="text-[13px] text-t2 leading-relaxed">
+            여기선 5형식을 아껴. 모든 걸 5형식으로 만들 필요는 없어 — 간결형이 정답일 때를 아는 게 실력.
+          </p>
         </div>
-      </div>
+      )}
 
       <div className="fu1 bg-c rounded-[16px] p-[18px] border border-line">
         <p className="text-[13px] text-t3 leading-relaxed mb-2">{originalKorean}</p>

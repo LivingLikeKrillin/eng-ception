@@ -11,7 +11,7 @@ import {
 import type { DataStore } from './dataStore'
 import type { LearningRecord, Pattern, Capture } from '../types'
 import { seedScenarios } from '../data/seed-scenarios'
-import { withSrsDefaults } from '../services/srs'
+import { withSrsDefaults, withRecordDefaults } from '../services/srs'
 
 const patternKey = (patternId: string, triggerVerb: string) => `${patternId}__${triggerVerb}`
 
@@ -46,7 +46,7 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
     },
     async getLearningRecords() {
       const snap = await getDocs(recordsCol())
-      return snap.docs.map((d) => d.data() as LearningRecord)
+      return snap.docs.map((d) => withRecordDefaults(d.data() as LearningRecord))
     },
     async deleteLearningRecord(id) {
       await deleteDoc(doc(recordsCol(), id))

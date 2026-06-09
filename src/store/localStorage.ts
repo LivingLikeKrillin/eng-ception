@@ -1,9 +1,9 @@
 import type { DataStore } from './dataStore'
 import type { Scenario, LearningRecord, Pattern, Capture } from '../types'
-import { withSrsDefaults } from '../services/srs'
+import { withSrsDefaults, withRecordDefaults } from '../services/srs'
 
 const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
-const CURRENT_SCHEMA_VERSION = 5
+const CURRENT_SCHEMA_VERSION = 6
 
 const KEYS = {
   scenarios: 'eng-ception:scenarios',
@@ -47,16 +47,21 @@ export const localStorageAdapter: DataStore = {
     const stored = localStorage.getItem(SCHEMA_VERSION_KEY)
     if (stored === String(CURRENT_SCHEMA_VERSION)) return
 
-    if (stored === '4') {
-      // Non-destructive v4 -> v5: backfill FSRS defaults onto existing patterns, keep records.
-      setItem(KEYS.patterns, getItem<Pattern>(KEYS.patterns).map(withSrsDefaults))
+    // Non-destructive forward migration to v6 for known recent versions.
+    if (stored === '4' || stored === '5') {
+      // v4 -> v5: backfill FSRS defaults onto patterns (v5 already has them).
+      if (stored === '4') {
+        setItem(KEYS.patterns, getItem<Pattern>(KEYS.patterns).map(withSrsDefaults))
+      }
+      // v4/v5 -> v6: backfill isFiveHMoment=true on existing records (all were 5형식).
+      setItem(KEYS.records, getItem<LearningRecord>(KEYS.records).map(withRecordDefaults))
       localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
       return
     }
 
     // Legacy (<=3) or unknown: clear records + patterns, set current version.
-    localStorage.removeItem('eng-ception:records')
-    localStorage.removeItem('eng-ception:patterns')
+    localStorage.removeItem(KEYS.records)
+    localStorage.removeItem(KEYS.patterns)
     localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
   },
 
@@ -93,7 +98,7 @@ export const localStorageAdapter: DataStore = {
   },
 
   async getLearningRecords() {
-    return getItem<LearningRecord>(KEYS.records)
+    return getItem<LearningRecord>(KEYS.records).map(withRecordDefaults)
   },
 
   async deleteLearningRecord(id) {

@@ -16,7 +16,7 @@ const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST)
 
 const makeRecord = (over: Partial<LearningRecord> = {}): LearningRecord => ({
   id: 'r1', schemaVersion: 4, scenarioId: 's1', originalKorean: 'x',
-  structureTypeId: 't', structureTypeLabel: 'T', pattern5hId: 'causative-bare',
+  structureTypeId: 't', structureTypeLabel: 'T', isFiveHMoment: true, pattern5hId: 'causative-bare',
   triggerVerb: 'make', finalSentence: 'I made him go.', precheckChoice: 'first',
   afterChoice: null, patternQuizCorrect: true, patternQuizUnsure: false,
   assemblyCorrect: true, completedAt: '2026-01-01T00:00:00Z', ...over,
