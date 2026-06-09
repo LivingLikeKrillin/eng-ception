@@ -3,7 +3,8 @@ import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
 import { track } from '../services/analytics'
-import { newCardDefaults } from '../services/srs'
+import { gradeFromSignals, newCardDefaults, schedule, type CardSchedule } from '../services/srs'
+import { isDue } from '../services/srsView'
 import { db } from './db'
 
 export interface PatternQuizAnswer {
@@ -272,7 +273,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
       }
       const record: LearningRecord = {
         id: crypto.randomUUID(),
-        schemaVersion: 4,
+        schemaVersion: 5,
         scenarioId: s.scenario?.id ?? null,
         originalKorean: s.originalKorean,
         structureTypeId: s.payload.structureType.id,
@@ -288,6 +289,43 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         completedAt: new Date().toISOString(),
       }
       await db.saveLearningRecord(record)
+
+      // --- SRS: grade this session and advance the card's schedule ---
+      const pid = s.payload.pattern5h.id
+      const verb = s.payload.pattern5h.triggerVerb
+      const grade = gradeFromSignals({
+        assemblyCorrect: isAssemblyCorrect(s),
+        patternQuizCorrect: s.patternQuizAnswer?.correct === true,
+        patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
+      })
+      const now = new Date()
+      const card = await db.getPattern(pid, verb)
+      const prev: CardSchedule | null = card
+        ? {
+            stability: card.stability, difficulty: card.difficulty,
+            cardState: card.cardState, reps: card.reps, lapses: card.lapses,
+            nextDueAt: card.nextDueAt, lastReviewedAt: card.lastReviewedAt,
+          }
+        : null
+      const next = schedule(prev, grade, now)
+      await db.updatePatternSchedule(pid, verb, {
+        ...next,
+        lastReviewedAt: now.toISOString(),
+        lastGrade: grade,
+        bypassedCount: 0, // reviewing a card clears its avoidance counter
+      })
+
+      // --- SRS: bypass bookkeeping — bump other cards that were due at `now` ---
+      const all = await db.getPatterns()
+      const otherDue = all.filter(
+        (p) => isDue(p, now) && !(p.patternId === pid && p.triggerVerb === verb),
+      )
+      for (const p of otherDue) {
+        await db.updatePatternSchedule(p.patternId, p.triggerVerb, {
+          bypassedCount: p.bypassedCount + 1,
+        })
+      }
+
       set(initial)
     },
   }
