@@ -74,7 +74,9 @@ describe.skipIf(!RUN)('FirestoreDataStore (emulator)', () => {
     const db = storeFor('u1')
     await db.saveCapture({ id: 'c1', korean: '안녕', createdAt: '2026-01-01T00:00:00Z', source: 'manual' })
     await db.saveCapture({ id: 'c2', korean: '잘가', createdAt: '2026-01-02T00:00:00Z', source: 'share' })
-    expect((await db.getCaptures()).map((c) => c.id).sort()).toEqual(['c1', 'c2'])
+    const all = await db.getCaptures()
+    expect(all.map((c) => c.id).sort()).toEqual(['c1', 'c2'])
+    expect(all.find((c) => c.id === 'c2')?.source).toBe('share') // fields round-trip
     await db.deleteCapture('c1')
     expect((await db.getCaptures()).map((c) => c.id)).toEqual(['c2'])
   })
