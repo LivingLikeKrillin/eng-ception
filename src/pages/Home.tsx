@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
 import { dueQueue, nextDueDate } from '../services/srsView'
 import { computeStreak, completedTodayCount, pickScenariosForHome, formatRelativeDay } from '../services/progress'
+import { parseShareText } from '../services/shareTarget'
 import { seedScenarios } from '../data/seed-scenarios'
-import type { Scenario } from '../types'
+import type { Scenario, Capture } from '../types'
 import ScenarioCard from '../components/home/ScenarioCard'
 import RecentLearning from '../components/home/RecentLearning'
 import AuthControl from '../components/common/AuthControl'
@@ -18,6 +19,8 @@ export default function Home() {
   const [streak, setStreak] = useState(0)
   const [completedToday, setCompletedToday] = useState(false)
   const [nextDueLabel, setNextDueLabel] = useState<string | null>(null)
+  const [captures, setCaptures] = useState<Capture[]>([])
+  const shareConsumed = useRef(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -35,12 +38,44 @@ export default function Home() {
       setDueCount(dueQueue(patterns, now).length)
       setStreak(computeStreak(records, now))
       setCompletedToday(completedTodayCount(records, now) > 0)
+      setCaptures(await db.getCaptures())
       const nd = nextDueDate(patterns, now)
       const rel = nd ? formatRelativeDay(nd, now) : null
       setNextDueLabel(rel === '오늘' ? '곧' : rel)
     }
     load()
   }, [])
+
+  // Web Share Target (GET): the OS opens the PWA at /?text=… Strip the query
+  // SYNCHRONOUSLY (history.replaceState, not async router navigate) + a consumed ref so
+  // StrictMode's double-mount can't create two captures before the URL clears.
+  useEffect(() => {
+    const text = parseShareText(window.location.search)
+    if (!text || shareConsumed.current) return
+    shareConsumed.current = true
+    window.history.replaceState({}, '', '/')
+    void (async () => {
+      await db.saveCapture({ id: crypto.randomUUID(), korean: text, createdAt: new Date().toISOString(), source: 'share' })
+      setCaptures(await db.getCaptures())
+    })()
+  }, [])
+
+  const refreshCaptures = async () => setCaptures(await db.getCaptures())
+  const handleSaveLater = async () => {
+    const korean = quickInput.trim()
+    if (!korean) return
+    await db.saveCapture({ id: crypto.randomUUID(), korean, createdAt: new Date().toISOString(), source: 'manual' })
+    setQuickInput('')
+    await refreshCaptures()
+  }
+  const drillCapture = async (c: Capture) => {
+    await db.deleteCapture(c.id)
+    navigate('/learn/custom', { state: { input: c.korean } })
+  }
+  const discardCapture = async (id: string) => {
+    await db.deleteCapture(id)
+    await refreshCaptures()
+  }
 
   const handleQuickStart = () => {
     if (quickInput.trim()) {
@@ -97,7 +132,16 @@ export default function Home() {
             rows={3}
             className="w-full bg-transparent border-none text-t1 text-base leading-relaxed resize-none outline-none font-ko placeholder:text-t3"
           />
-          <div className="flex justify-end items-center mt-3.5">
+          <div className="flex justify-end items-center gap-2 mt-3.5">
+            <button
+              onClick={() => void handleSaveLater()}
+              disabled={!canGo}
+              className={`pressable h-[42px] px-4 rounded-[14px] text-sm font-medium transition-all ${
+                canGo ? 'bg-c2 text-t2 active:opacity-70' : 'bg-c2 text-t3 cursor-default'
+              }`}
+            >
+              나중에
+            </button>
             <button
               onClick={handleQuickStart}
               disabled={!canGo}
@@ -128,6 +172,37 @@ export default function Home() {
             다음 복습: {nextDueLabel} →
           </button>
         ) : null}
+
+        {/* Capture inbox — stashed Korean to drill later */}
+        {captures.length > 0 && (
+          <div className="fu2 mt-8">
+            <p className="text-xs font-semibold text-t3 mb-3.5 tracking-wider uppercase font-en">
+              나중에 풀 거 {captures.length}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {[...captures]
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .map((c) => (
+                  <div key={c.id} className="flex items-center gap-2 px-4 py-3 bg-c rounded-[14px] border border-line">
+                    <p className="flex-1 text-sm text-t2 truncate">{c.korean}</p>
+                    <button
+                      onClick={() => void drillCapture(c)}
+                      className="text-[12px] text-accent font-semibold pressable active:opacity-70 shrink-0"
+                    >
+                      풀기
+                    </button>
+                    <button
+                      onClick={() => void discardCapture(c.id)}
+                      aria-label="삭제"
+                      className="text-t3 hover:text-t2 transition shrink-0 px-1 text-lg leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         {/* Try these — scenarios */}
         {scenarios.length > 0 && (
