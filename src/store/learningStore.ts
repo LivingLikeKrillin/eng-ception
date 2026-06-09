@@ -102,7 +102,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     const t0 = Date.now()
     if (sessionId) track('fetch_start', {}, sessionId)
     try {
-      const payload = await fetchSessionPayload(get().originalKorean)
+      const payload = await fetchSessionPayload(get().originalKorean, get().scenario?.id)
       set({ payload, payloadStatus: 'ready', error: null })
       if (sessionId) track('fetch_success', { latencyMs: Date.now() - t0 }, sessionId)
     } catch (e) {
