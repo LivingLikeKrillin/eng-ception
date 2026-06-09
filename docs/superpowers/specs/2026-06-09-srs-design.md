@@ -85,7 +85,7 @@ lastGrade: 1 | 2 | 3 | 4 | null // last applied grade (default null)
 
 ### 4.2 `services/srs.ts` — pure FSRS scheduler (testable, no I/O)
 
-- `schedule(prev: CardSchedule | null, grade: Grade, now: Date): CardSchedule` — implements FSRS-5 DSR update with **published default weights** (`DEFAULT_W: number[]`, a module constant). `prev = null` (or `state:'new'`) → initial stability/difficulty from grade; otherwise updates stability via the FSRS recall/forget formulas using elapsed days since `lastReviewedAt`, and computes `nextDueAt = now + interval(stability, requestRetention)`.
+- `schedule(prev: CardSchedule | null, grade: Grade, now: Date): CardSchedule` — implements FSRS-5 DSR update with **published default weights** (`DEFAULT_W: number[]`, a module constant). `prev = null` (or `state:'new'`) → **initial** stability/difficulty derived from grade only; the elapsed-since-last term is **not read** on the new-card path (a `state:'new'` card's `lastReviewedAt` may be the step3-upsert time or null and must be ignored). For `state ∈ {review, relearning}`, update stability via the FSRS recall/forget formulas using `elapsedDays = (now − lastReviewedAt) / 1day`, and compute `nextDueAt = now + interval(stability, requestRetention)`. `CardSchedule` therefore carries `{ stability, difficulty, state, reps, lapses, lastReviewedAt }` — enough to run the update without any storage access.
 - `requestRetention` = a module constant (default 0.9, FSRS standard).
 - `gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure }): Grade` — the §5 table.
 - `INTRO_PHASE` flag (default `false`): when true, a brand-new card's first non-Again interval is clamped to 0.25 day (expert E). Off by default; documented as a future A/B arm.
@@ -96,6 +96,7 @@ lastGrade: 1 | 2 | 3 | 4 | null // last applied grade (default null)
 - `isDue(card, now): boolean` — `nextDueAt == null || nextDueAt <= now`.
 - `dueQueue(cards, now): Pattern[]` — due cards sorted by escalation desc (`bypassedCount >= N` first), then overdue-ness desc, then `nextDueAt` asc.
 - `masteryLabel(card): '새내기' | '학습중' | '숙련'` — by FSRS stability bands: `reps === 0 → 새내기`; `stability < 21 days → 학습중`; `>= 21 days → 숙련`. (Expert's "~30 varied-rep for automation" recorded as a future refinement, not the v1 label source.)
+- **Sort value for unscheduled cards**: in the overdue-ness ordering, a card with `nextDueAt == null` (never scheduled / backfilled / new) is treated as **maximally overdue** (sorts before scheduled overdue cards), so freshly-seen-but-never-reviewed circuits surface first.
 - `rollupByPattern(cards): { id: Pattern5HId; cards: Pattern[]; dueCount: number; mastery: ... }[]` — the upper layer; aggregate over child cards.
 - `N_BYPASS = 3` (static cold-start config).
 - No I/O, no DOM. Unit-testable in `node` env.
@@ -108,7 +109,7 @@ Add to the `DataStore` interface:
 
 **localStorage adapter**: `getPattern` = find by composite key; `updatePatternSchedule` = find + `Object.assign` + persist. `init()` migration v4→v5 becomes **non-destructive**: on version bump, read existing patterns, backfill missing FSRS fields with new-card defaults (`stability:null, difficulty:null, nextDueAt:null, reps:0, lapses:0, bypassedCount:0, state:'new', lastGrade:null`), write back; keep records (bump their literal `schemaVersion` is unnecessary at read since type widens — see §7). Set stored version to 5.
 
-**Firestore adapter**: `getPattern` = `getDoc(composite key)`; `updatePatternSchedule` = `setDoc(ref, partial, {merge:true})` (queues offline like the existing increment). No schema-version concept → reads apply **defensive defaults** for missing FSRS fields (a `withDefaults(pattern)` helper) so cloud docs written pre-v5 read cleanly.
+**Firestore adapter**: `getPattern` = `getDoc(composite key)`; `updatePatternSchedule` = `setDoc(ref, partial, {merge:true})` (queues offline like the existing increment). No schema-version concept → reads apply **defensive defaults** for missing FSRS fields (a `withDefaults(pattern)` helper) so cloud docs written pre-v5 read cleanly. **`withDefaults` must be applied in BOTH `getPatterns` AND the new single-doc `getPattern`** — `complete()` reads a possibly-pre-v5 card via `getPattern` and feeds it to `schedule(toSchedule(prev), …)`, which would break on `undefined` fields otherwise.
 
 ### 4.5 `store/learningStore.ts` — apply the review at completion + bypass bookkeeping
 
@@ -117,9 +118,9 @@ In `complete()`, after `saveLearningRecord`:
 2. `prev = await db.getPattern(pid, verb)` (the card was upserted at step3).
 3. `next = schedule(toSchedule(prev), grade, new Date())`.
 4. `await db.updatePatternSchedule(pid, verb, { ...next fields, reps, lapses, lastGrade: grade, lastReviewedAt, bypassedCount: 0 })` (reviewing a card resets its avoidance counter).
-5. **Bypass bookkeeping**: load all patterns, for each card that was due at `now` and is **not** this card, `updatePatternSchedule(..., { bypassedCount: card.bypassedCount + 1 })`. Bounded by the curated taxonomy (≤ 7 patterns × ~5 verbs realistically; ~17 distinct curated verbs total), and a session is infrequent → write volume is small; Firestore writes queue offline.
-   - ⚖️ optional optimization (plan detail): only run bypass bookkeeping when there is at least one other due card.
+5. **Bypass bookkeeping**: load all patterns, compute the due set at `now`; for each due card that is **not** this card, `updatePatternSchedule(..., { bypassedCount: card.bypassedCount + 1 })`. **Skip the whole step when no other card is due** (the common path: a single `getPatterns` read, zero extra writes). Otherwise bounded by the curated taxonomy (≤ 7 patterns × ~5 verbs; ~17 distinct curated verbs total), and a session is infrequent → write volume is small; Firestore writes queue offline.
 - `advanceToStep3()` (pattern upsert) is unchanged — new cards still start with new-card defaults via the upsert path; FSRS fields are set on the first `complete()`.
+- **`complete()` currently hardcodes `schemaVersion: 4` when building the `LearningRecord`** — bump that literal to `5` for newly written records.
 
 ### 4.6 `pages/Review.tsx` — SRS surface (the diagnostic home)
 
@@ -128,9 +129,15 @@ Consolidate SRS into 복습 (it is literally "review"; already loads records + p
 - **"회로 진단"** — `rollupByPattern`: 7 `Pattern5HId` rows (label + mastery summary + due count); expanding a row reveals its verb cards with `masteryLabel`, due/회피 badges, `reps`, and next-due date.
 - Existing "Saved Patterns" preview + "Sentences" list stay. **구조(Patterns) page is untouched** (static library).
 
-### 4.7 Re-practice wiring
+### 4.7 Re-practice wiring (reuse the existing seed path — do NOT invent a new key)
 
-Tapping a due card starts a fresh session seeded with `card.exampleOriginal` via `startCustom(korean)`. The Korean must reach the Learn flow: pass it through router state (`navigate('/learn/custom', { state: { korean } })`) and have `Learn.tsx` call `startCustom(state.korean)` when present. (Exact wiring confirmed against current `Learn.tsx`/quick-input in the plan; today the record "다시 풀기" routes to `/learn/custom` — this milestone makes that route seed-aware.)
+Tapping a due card starts a fresh session seeded with `card.exampleOriginal`. **The seeding seam already works today** via the router-state key **`input`**: `Home.tsx`'s quick-start does `navigate('/learn/custom', { state: { input: quickInput } })`, and `Learn.tsx` reads `(location.state as { input?: string })?.input` and calls `startCustom(passedInput)` on bootstrap. So the due-card tap must use the **same** key:
+
+```ts
+navigate('/learn/custom', { state: { input: card.exampleOriginal } })
+```
+
+**Do not** use `{ state: { korean } }` and do **not** add a new `Learn.tsx` branch — that path is already wired. Note: today's Review "다시 풀기" button (`Review.tsx`) routes to `/learn/custom` with **no `state`** (lands on the blank custom-input screen); this milestone's due-card tap is the first Review-side caller to pass the `input` seed. (Optionally the existing "다시 풀기" can be upgraded to seed `r.originalKorean` the same way, but that is not required for SRS.)
 
 ### 4.8 `pages/Home.tsx` — nudge
 
@@ -159,6 +166,7 @@ Rationale: production (assembly) is the actual target skill, so any `assembly �
 
 - **localStorage v4 → v5**: non-destructive. `init()` detects stored version ≠ 5, backfills FSRS defaults onto existing patterns, preserves records, sets version 5. (Contrast with the current destructive nuke-on-mismatch.) Records keep working; `schemaVersion` type widens to `4 | 5` during transition, new records written as `5`. ⚖️ Decision point for review: whether to also rewrite old records' literal to 5 or just widen the type and leave historical records at 4 (proposed: **widen type, leave history**, since records carry no FSRS state).
 - **Firestore**: no version step; `withDefaults()` applied on every pattern read so pre-v5 cloud docs (and the offline cache) read with FSRS defaults; `updatePatternSchedule` merge-writes fill them in over time.
+- **Login merge (`services/migrateToCloud.ts`) — FSRS state handling.** Migration uploads local patterns via `cloud.savePattern(p)`. The Firestore `savePattern` has two branches: a **new** composite key writes the **whole** pattern object (FSRS fields included — preserved ✓); an **existing** key merges only `{ reviewCount: increment(1), lastReviewedAt }`, which would **drop** the local card's `stability/difficulty/nextDueAt/reps/lapses/state`. Resolution for v1: **on composite-key collision, the cloud schedule is authoritative** (cloud is the multi-device source of truth); local-only cards (the realistic first-login case — cloud is empty, so *no* collisions and *all* local FSRS state uploads intact) are fully preserved. The only loss is cross-device offline-schedule divergence on the *same* card during a re-login — **accepted and deferred**, parallel to the existing pattern-id-divergence-on-merge note (firebase spec §8). Full multi-device schedule reconciliation is out of scope. **This is a documented decision, not a code change** — `migrateToCloud` and `savePattern` stay as-is.
 - **Unconfigured Firebase / pure-local**: unchanged behavior; SRS runs entirely on localStorage.
 - **Mock mode / e2e**: `complete()` still runs the scheduler against whatever adapter is wired; mock payloads already produce a `(pid, verb)` card, so SRS state accrues in tests too.
 
@@ -166,7 +174,8 @@ Rationale: production (assembly) is the actual target skill, so any `assembly �
 
 - `services/srs.ts`: unit tests — initial scheduling per grade; recall vs forget transitions; interval monotonicity; `gradeFromSignals` all 6 cells; `INTRO_PHASE` on/off boundary.
 - `services/srsView.ts`: `isDue` (incl. `nextDueAt:null`), `dueQueue` ordering (escalation → overdue → due asc), `masteryLabel` bands, `rollupByPattern` aggregation.
-- Adapters: `getPattern` / `updatePatternSchedule` round-trip (localStorage); non-destructive v4→v5 migration backfill; Firestore `withDefaults` + merge-write under the emulator (`test:emulator`).
+- Adapters: `getPattern` / `updatePatternSchedule` round-trip (localStorage); non-destructive v4→v5 migration backfill (existing patterns gain defaults, records survive); Firestore `withDefaults` on both reads + merge-write under the emulator (`test:emulator`).
+- Login merge (emulator): a local-only card uploads full FSRS state; a collision keeps cloud's schedule (cloud-authoritative, §7) — extend the existing `migrateToCloud.emulator.test`.
 - `learningStore.complete()`: grade applied, card scheduled, `bypassedCount` reset on review + incremented on other due cards.
 - e2e (mock): complete a session → due card appears in 복습 → tap re-practice seeds the Korean.
 
@@ -178,8 +187,9 @@ Rationale: production (assembly) is the actual target skill, so any `assembly �
 - Mastery label refinement toward the expert's varied-rep (~30) automation threshold.
 - SM-2 ↔ FSRS swap is kept cheap by the pure scheduler seam + the records log, if ever needed.
 
-## 10. Open decisions for spec review
+## 10. Resolved decisions (post spec-review)
 
-1. **Records literal on migration** (§7): widen `schemaVersion` type to `4 | 5` and leave historical records at 4 (proposed), vs rewrite all to 5.
-2. **Bypass bookkeeping cost** (§4.5): per-completion increment on all other due cards — acceptable given the bounded curated taxonomy, or move to a lazy/derived counter?
-3. **Mastery bands** (§4.3): stability cutoffs (21 days for 숙련) — confirm or tune.
+1. **Records literal on migration** (§7): **LOCKED** — widen `schemaVersion` type to `4 | 5`, leave historical records at 4, write new records as 5. Records carry no FSRS state, so there is no read-time risk.
+2. **Bypass bookkeeping cost** (§4.5): **LOCKED** — per-completion increment on other due cards, **skipped entirely when nothing else is due** (common path = one read, zero writes). Bounded by the curated taxonomy; keep the stored counter (a lazy/derived counter would need historical `nextDueAt`, which is not retained).
+3. **Login-merge FSRS conflict** (§7): **LOCKED** — cloud-authoritative on composite-key collision; local-only cards preserved; cross-device offline divergence deferred. No code change to `migrateToCloud`/`savePattern`.
+4. **Mastery bands** (§4.3): stability cutoffs (`<21d` 학습중, `≥21d` 숙련) — provisional; tune once real card histories exist (data-gated, §9).
