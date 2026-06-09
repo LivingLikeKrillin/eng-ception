@@ -13,7 +13,7 @@ export default function StepFeedback() {
 
   return (
     <div className="space-y-5 fu">
-      <div className="bg-c rounded-[16px] p-5 border border-line">
+      <div className="bg-c rounded-[16px] p-5 border border-line" aria-live="polite">
         <p className={`text-[20px] font-bold mb-3 ${correct ? 'text-ok' : 'text-warn'}`}>
           {title}
         </p>

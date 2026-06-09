@@ -110,7 +110,7 @@ export default function StepStructure() {
 
         {/* Hint scaffold: shown after "잘 모르겠어", before a verb is picked. Does not reveal which button is correct. */}
         {hinted && !answered && correctOption && (
-          <div className="mt-3 p-3 rounded-[10px] bg-c2 border border-line">
+          <div className="mt-3 p-3 rounded-[10px] bg-c2 border border-line" aria-live="polite">
             <p className="text-[11px] font-semibold text-t3 mb-1">힌트</p>
             <p className="text-xs text-t2 leading-relaxed">{correctOption.hint}</p>
           </div>
@@ -118,7 +118,7 @@ export default function StepStructure() {
 
         {/* Answer feedback: only after a verb is picked */}
         {answered && (
-          <div className="mt-3 p-3 rounded-[10px] bg-ok/[0.04] border border-ok/[0.10]">
+          <div className="mt-3 p-3 rounded-[10px] bg-ok/[0.04] border border-ok/[0.10]" aria-live="polite">
             <p className="text-xs text-ok leading-relaxed font-medium">
               {structure.patternQuiz.feedback}
             </p>

@@ -36,6 +36,8 @@ export default function CircuitDiagnostic({ patterns, now }: Props) {
             {/* Pattern row header */}
             <button
               onClick={() => toggle(r.id)}
+              aria-expanded={expanded.has(r.id)}
+              aria-label={`${PATTERN_LABEL[r.id]} ${expanded.has(r.id) ? '접기' : '펼치기'}`}
               className="pressable w-full flex justify-between items-center px-4 py-3 text-left active:opacity-70 transition"
             >
               <span className="text-sm font-semibold text-t1">
