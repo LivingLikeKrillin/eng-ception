@@ -24,7 +24,7 @@ test('건너뛰기 closes onboarding and it does not resurface on reload', async
   await expect(page.getByTestId('onboarding')).toBeHidden()
 
   await page.reload()
-  // flag persisted → onboarding stays gone (give the async Home load a moment)
-  await page.waitForTimeout(1000)
+  // flag persisted → Home renders (quick-input visible) and onboarding stays gone
+  await expect(page.getByPlaceholder('한국어로 그냥 적어봐. 맞춤법 신경 쓸 필요 없어.')).toBeVisible()
   await expect(page.getByTestId('onboarding')).toBeHidden()
 })
