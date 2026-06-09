@@ -3,8 +3,8 @@ import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
 import { track } from '../services/analytics'
-import { gradeFromSignals, newCardDefaults, schedule, type CardSchedule } from '../services/srs'
-import { isDue } from '../services/srsView'
+import { gradeFromSignals, newCardDefaults } from '../services/srs'
+import { applyReview } from '../services/applyReview'
 import { db } from './db'
 
 export interface PatternQuizAnswer {
@@ -321,38 +321,10 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
       try {
         await db.saveLearningRecord(record)
 
-        // --- SRS: grade this session and advance the card's schedule ---
-        const pid = s.payload.pattern5h.id
-        const verb = s.payload.pattern5h.triggerVerb
+        // --- SRS: grade this session and advance the card's schedule (+ N-bypass bookkeeping).
+        // Shared with offline recall via applyReview. ---
         const grade = gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure })
-        const now = new Date()
-        const card = await db.getPattern(pid, verb)
-        const prev: CardSchedule | null = card
-          ? {
-              stability: card.stability, difficulty: card.difficulty,
-              cardState: card.cardState, reps: card.reps, lapses: card.lapses,
-              nextDueAt: card.nextDueAt, lastReviewedAt: card.lastReviewedAt,
-            }
-          : null
-        const next = schedule(prev, grade, now)
-        await db.updatePatternSchedule(pid, verb, {
-          ...next, // next already carries lastReviewedAt (R5)
-          lastGrade: grade,
-          bypassedCount: 0, // reviewing a card clears its avoidance counter
-        })
-
-        // --- SRS: bypass bookkeeping — bump other cards that were due at `now` ---
-        const all = await db.getPatterns()
-        const otherDue = all.filter(
-          (p) => isDue(p, now) && !(p.patternId === pid && p.triggerVerb === verb),
-        )
-        await Promise.all(
-          otherDue.map((p) =>
-            db.updatePatternSchedule(p.patternId, p.triggerVerb, {
-              bypassedCount: p.bypassedCount + 1,
-            }),
-          ),
-        )
+        await applyReview(s.payload.pattern5h.id, s.payload.pattern5h.triggerVerb, grade, new Date())
       } catch (e) {
         console.error('complete() persist failed', e)
       }
