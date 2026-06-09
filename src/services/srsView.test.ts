@@ -62,4 +62,14 @@ describe('rollupByPattern', () => {
     expect(bare.dueCount).toBe(1) // only the unscheduled 'make'
     expect(roll.find((r) => r.id === 'perception')!.dueCount).toBe(1)
   })
+
+  it('counts escalated (bypassedCount>=N) cards per pattern', () => {
+    const cards = [
+      card({ patternId: 'causative-bare', triggerVerb: 'make', bypassedCount: 3 }),
+      card({ patternId: 'causative-bare', triggerVerb: 'have', bypassedCount: 0 }),
+      card({ patternId: 'causative-bare', triggerVerb: 'let', bypassedCount: 5 }),
+    ]
+    const bare = rollupByPattern(cards, NOW).find((r) => r.id === 'causative-bare')!
+    expect(bare.escalatedCount).toBe(2) // make + let
+  })
 })
