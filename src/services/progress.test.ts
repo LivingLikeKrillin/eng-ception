@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  localDayKey, computeStreak, completedTodayCount, masterySummary,
+  localDayKey, computeStreak, reviewedToday, masterySummary,
   pickScenariosForHome, formatRelativeDay,
 } from './progress'
 import { newCardDefaults } from './srs'
@@ -37,30 +37,45 @@ const at = (local: string) => new Date(local).toISOString()
 describe('computeStreak', () => {
   it('counts today + consecutive prior days', () => {
     const r = [rec(at('2026-06-09T09:00')), rec(at('2026-06-08T20:00')), rec(at('2026-06-07T08:00'))]
-    expect(computeStreak(r, NOW)).toBe(3)
+    expect(computeStreak(r, [], NOW)).toBe(3)
   })
   it('grace: yesterday active but not today still counts (ending yesterday)', () => {
-    expect(computeStreak([rec(at('2026-06-08T20:00')), rec(at('2026-06-07T08:00'))], NOW)).toBe(2)
+    expect(computeStreak([rec(at('2026-06-08T20:00')), rec(at('2026-06-07T08:00'))], [], NOW)).toBe(2)
   })
   it('breaks when neither today nor yesterday active', () => {
-    expect(computeStreak([rec(at('2026-06-07T08:00'))], NOW)).toBe(0)
+    expect(computeStreak([rec(at('2026-06-07T08:00'))], [], NOW)).toBe(0)
   })
   it('same-day multiple sessions collapse to one day', () => {
-    expect(computeStreak([rec(at('2026-06-09T08:00')), rec(at('2026-06-09T20:00'))], NOW)).toBe(1)
+    expect(computeStreak([rec(at('2026-06-09T08:00')), rec(at('2026-06-09T20:00'))], [], NOW)).toBe(1)
   })
-  it('empty = 0', () => { expect(computeStreak([], NOW)).toBe(0) })
+  it('empty = 0', () => { expect(computeStreak([], [], NOW)).toBe(0) })
   it('steps by local calendar across a month boundary', () => {
     const now = new Date('2026-07-01T10:00:00')
     const r = [rec(at('2026-07-01T09:00')), rec(at('2026-06-30T20:00')), rec(at('2026-06-29T08:00'))]
-    expect(computeStreak(r, now)).toBe(3)
+    expect(computeStreak(r, [], now)).toBe(3)
+  })
+  it('counts offline recall (pattern.lastReviewedAt) toward the streak', () => {
+    // no records; only a card reviewed today + one yesterday → 2-day streak
+    const patterns = [
+      card({ triggerVerb: 'make', lastReviewedAt: at('2026-06-09T09:00') }),
+      card({ triggerVerb: 'let', lastReviewedAt: at('2026-06-08T09:00') }),
+    ]
+    expect(computeStreak([], patterns, NOW)).toBe(2)
+  })
+  it('unions session + recall days (no double-count same day)', () => {
+    const records = [rec(at('2026-06-08T09:00'))]
+    const patterns = [card({ lastReviewedAt: at('2026-06-09T09:00') })]
+    expect(computeStreak(records, patterns, NOW)).toBe(2)
   })
 })
 
-describe('completedTodayCount', () => {
-  it('counts only today (local)', () => {
-    expect(completedTodayCount(
-      [rec(at('2026-06-09T08:00')), rec(at('2026-06-09T23:00')), rec(at('2026-06-08T08:00'))], NOW,
-    )).toBe(2)
+describe('reviewedToday', () => {
+  it('true when a session OR a recall happened today', () => {
+    expect(reviewedToday([rec(at('2026-06-09T08:00'))], [], NOW)).toBe(true)
+    expect(reviewedToday([], [card({ lastReviewedAt: at('2026-06-09T08:00') })], NOW)).toBe(true)
+  })
+  it('false when the only activity was earlier', () => {
+    expect(reviewedToday([rec(at('2026-06-08T08:00'))], [card({ lastReviewedAt: at('2026-06-08T08:00') })], NOW)).toBe(false)
   })
 })
 
