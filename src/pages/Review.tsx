@@ -29,9 +29,10 @@ export default function Review() {
 
   // Offline recall: self-rate advances the FSRS schedule (no API, no LearningRecord).
   const handleRecallGrade = async (grade: Grade) => {
-    if (!recallCard) return
-    await applyReview(recallCard.patternId, recallCard.triggerVerb, grade, new Date())
-    setRecallCard(null)
+    const card = recallCard
+    if (!card) return
+    setRecallCard(null) // close first → buttons unmount, so a rapid double-tap can't double-grade
+    await applyReview(card.patternId, card.triggerVerb, grade, new Date())
     setPatterns(await db.getPatterns()) // refresh due queue / summary
   }
 
