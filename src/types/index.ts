@@ -33,6 +33,14 @@ export interface LearningRecord {
   completedAt: string
 }
 
+// 나중에 풀기 인박스 — stash a stuck Korean moment now, drill later (F4).
+export interface Capture {
+  id: string
+  korean: string
+  createdAt: string          // ISO
+  source: 'manual' | 'share'
+}
+
 export interface Pattern {
   id: string
   template: string

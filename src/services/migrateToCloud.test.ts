@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { migrateToCloud } from './migrateToCloud'
 import type { DataStore } from '../store/dataStore'
-import type { LearningRecord, Pattern } from '../types'
+import type { LearningRecord, Pattern, Capture } from '../types'
 import { newCardDefaults } from './srs'
 
-function memStore(seedRecords: LearningRecord[] = [], seedPatterns: Pattern[] = []): DataStore {
+function memStore(
+  seedRecords: LearningRecord[] = [],
+  seedPatterns: Pattern[] = [],
+  seedCaptures: Capture[] = [],
+): DataStore {
   let records = [...seedRecords]
   let patterns = [...seedPatterns]
+  let captures = [...seedCaptures]
   return {
     async init() {},
     async getScenarios() { return [] },
@@ -26,8 +31,12 @@ function memStore(seedRecords: LearningRecord[] = [], seedPatterns: Pattern[] = 
     async deletePattern(id) { patterns = patterns.filter((p) => p.id !== id) },
     async getPattern() { return null },
     async updatePatternSchedule() {},
+    async saveCapture(c) { if (!captures.find((x) => x.id === c.id)) captures.push(c) },
+    async getCaptures() { return captures },
+    async deleteCapture(id) { captures = captures.filter((c) => c.id !== id) },
   }
 }
+const cap = (id: string): Capture => ({ id, korean: '안녕', createdAt: '2026-01-01T00:00:00Z', source: 'manual' })
 const rec = (id: string): LearningRecord => ({
   id, schemaVersion: 4, scenarioId: null, originalKorean: 'x', structureTypeId: 't',
   structureTypeLabel: 'T', pattern5hId: 'causative-bare', triggerVerb: 'make',
@@ -50,6 +59,14 @@ describe('migrateToCloud', () => {
     expect((await cloud.getPatterns()).map((p) => p.triggerVerb).sort()).toEqual(['let', 'make'])
     expect(await local.getLearningRecords()).toHaveLength(0)
     expect(await local.getPatterns()).toHaveLength(0)
+  })
+
+  it('unions captures into cloud and clears local on success', async () => {
+    const local = memStore([], [], [cap('c1')])
+    const cloud = memStore([], [], [cap('c2')])
+    await migrateToCloud(local, cloud)
+    expect((await cloud.getCaptures()).map((c) => c.id).sort()).toEqual(['c1', 'c2'])
+    expect(await local.getCaptures()).toHaveLength(0)
   })
 
   it('increments reviewCount when a pattern already exists in cloud', async () => {

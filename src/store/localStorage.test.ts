@@ -91,6 +91,26 @@ describe('localStorageAdapter.getPattern / updatePatternSchedule', () => {
   })
 })
 
+describe('localStorageAdapter captures', () => {
+  it('save / get / delete round-trip', async () => {
+    await localStorageAdapter.saveCapture({ id: 'c1', korean: '안녕', createdAt: '2026-01-01T00:00:00Z', source: 'manual' })
+    await localStorageAdapter.saveCapture({ id: 'c2', korean: '잘가', createdAt: '2026-01-02T00:00:00Z', source: 'share' })
+    expect((await localStorageAdapter.getCaptures()).map((c) => c.id)).toEqual(['c1', 'c2'])
+    await localStorageAdapter.deleteCapture('c1')
+    expect((await localStorageAdapter.getCaptures()).map((c) => c.id)).toEqual(['c2'])
+  })
+
+  it('caps at MAX_CAPTURES (50), dropping oldest', async () => {
+    for (let i = 0; i < 55; i++) {
+      await localStorageAdapter.saveCapture({ id: `c${i}`, korean: 'x', createdAt: '2026-01-01T00:00:00Z', source: 'manual' })
+    }
+    const all = await localStorageAdapter.getCaptures()
+    expect(all).toHaveLength(50)
+    expect(all[0].id).toBe('c5')   // oldest 5 dropped
+    expect(all[49].id).toBe('c54')
+  })
+})
+
 describe('localStorageAdapter resilience', () => {
   it('returns [] and drops the key on corrupt JSON (no boot crash)', async () => {
     localStorage.setItem('eng-ception:patterns', '{not valid json')

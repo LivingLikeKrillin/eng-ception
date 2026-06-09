@@ -8,7 +8,7 @@ import type { Firestore } from 'firebase/firestore'
 import { createFirestoreDataStore } from '../store/firestoreDataStore'
 import { migrateToCloud } from './migrateToCloud'
 import type { DataStore } from '../store/dataStore'
-import type { LearningRecord, Pattern } from '../types'
+import type { LearningRecord, Pattern, Capture } from '../types'
 import { newCardDefaults } from './srs'
 
 // Login data-flow smoke against the REAL Firestore emulator: the same path the manual
@@ -21,6 +21,7 @@ const RUN = Boolean(process.env.FIRESTORE_EMULATOR_HOST)
 function memStore(records: LearningRecord[] = [], patterns: Pattern[] = []): DataStore {
   let r = [...records]
   let p = [...patterns]
+  let caps: Capture[] = []
   return {
     async init() {},
     async getScenarios() { return [] },
@@ -40,6 +41,9 @@ function memStore(records: LearningRecord[] = [], patterns: Pattern[] = []): Dat
     async deletePattern(id) { p = p.filter((x) => x.id !== id) },
     async getPattern() { return null },
     async updatePatternSchedule() {},
+    async saveCapture(c) { if (!caps.find((x) => x.id === c.id)) caps.push(c) },
+    async getCaptures() { return caps },
+    async deleteCapture(id) { caps = caps.filter((x) => x.id !== id) },
   }
 }
 const rec = (id: string): LearningRecord => ({
