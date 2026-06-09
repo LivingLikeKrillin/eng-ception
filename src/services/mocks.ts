@@ -364,12 +364,12 @@ export const FIX_SIMPLER: SessionPayload = {
     },
   },
   assembly: {
+    // 2-block 간결형 — exercises the blocks 2..3 relaxation across store + UI.
     blocks: [
-      { id: 'b1', en: 'It', order: 1 },
-      { id: 'b2', en: 'was', order: 2 },
-      { id: 'b3', en: 'nice to just sit there', order: 3 },
+      { id: 'b1', en: 'It was nice', order: 1 },
+      { id: 'b2', en: 'to just sit there', order: 2 },
     ],
-    blockRoles: ['subject', 'verb', 'complement'],
+    blockRoles: ['subject', 'complement'],
     connectors: [
       { id: 'period', label: '.', meaning: '한 문장으로 마무리', isCorrect: true },
       { id: 'and', label: 'and', meaning: '내용 추가용', isCorrect: false },
