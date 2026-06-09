@@ -37,7 +37,8 @@ eng-ception/
 ├── api/
 │   └── chat.ts                   # Vercel Edge Function (Claude API 프록시, model claude-sonnet-4-6)
 ├── e2e/
-│   └── learn-flow.spec.ts        # Playwright e2e — mock 모드로 7스텝 전체 워크스루
+│   ├── learn-flow.spec.ts        # Playwright e2e — mock 모드로 7스텝 전체 워크스루
+│   └── srs-flow.spec.ts          # Playwright e2e — 완료→복습 due 카드→재연습 empathy 도달
 ├── src/
 │   ├── main.tsx                  # 앱 엔트리포인트 (db.init() + 시드 시나리오 적재)
 │   ├── App.tsx                   # 라우터 설정
