@@ -73,7 +73,9 @@ export default function Review() {
               <div className="bg-c border border-line rounded-[14px] px-4 py-5 text-center">
                 <p className="text-sm text-t2">오늘 복습 다 끝났어요 ✓</p>
                 {nextDue && (
-                  <p className="text-[11px] text-t3 mt-1">다음 복습: {formatRelativeDay(nextDue, now)}</p>
+                  <p className="text-[11px] text-t3 mt-1">
+                    다음 복습: {formatRelativeDay(nextDue, now) === '오늘' ? '곧' : formatRelativeDay(nextDue, now)}
+                  </p>
                 )}
               </div>
             )}
