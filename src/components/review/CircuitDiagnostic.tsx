@@ -28,7 +28,7 @@ export default function CircuitDiagnostic({ patterns, now }: Props) {
   return (
     <section>
       <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
-        Circuit Diagnostic
+        회로 진단
       </p>
       <div className="space-y-2">
         {rollup.map((r) => (

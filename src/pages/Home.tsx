@@ -109,7 +109,7 @@ export default function Home() {
         {dueCount > 0 && (
           <button
             onClick={() => navigate('/review')}
-            className="fu2 mt-6 text-left text-sm text-accent font-semibold"
+            className="fu2 mt-6 text-left text-sm text-accent font-semibold pressable active:opacity-70 transition"
           >
             복습할 회로 {dueCount}개 →
           </button>
