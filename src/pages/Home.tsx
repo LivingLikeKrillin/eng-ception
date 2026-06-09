@@ -4,8 +4,10 @@ import { db } from '../store/db'
 import { dueQueue, nextDueDate } from '../services/srsView'
 import { computeStreak, reviewedToday, pickScenariosForHome, formatRelativeDay } from '../services/progress'
 import { parseShareText } from '../services/shareTarget'
+import { hasSeenOnboarding, markOnboardingSeen } from '../services/onboarding'
 import { seedScenarios } from '../data/seed-scenarios'
 import type { Scenario, Capture } from '../types'
+import Onboarding from '../components/onboarding/Onboarding'
 import ScenarioCard from '../components/home/ScenarioCard'
 import RecentLearning from '../components/home/RecentLearning'
 import AuthControl from '../components/common/AuthControl'
@@ -20,6 +22,7 @@ export default function Home() {
   const [completedToday, setCompletedToday] = useState(false)
   const [nextDueLabel, setNextDueLabel] = useState<string | null>(null)
   const [captures, setCaptures] = useState<Capture[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const shareConsumed = useRef(false)
   const navigate = useNavigate()
 
@@ -33,6 +36,12 @@ export default function Home() {
       const records = await db.getLearningRecords()
       const patterns = await db.getPatterns()
       const now = new Date()
+      // First-run onboarding: only brand-new users. Existing users (have records but no
+      // flag — e.g. updated mid-use) get the flag set silently so it never resurfaces.
+      if (!hasSeenOnboarding()) {
+        if (records.length === 0) setShowOnboarding(true)
+        else markOnboardingSeen()
+      }
       setScenarios(pickScenariosForHome(scenarios, records, 3))
       setHasCompletedSession(records.length > 0)
       setDueCount(dueQueue(patterns, now).length)
@@ -77,6 +86,12 @@ export default function Home() {
     await refreshCaptures()
   }
 
+  const finishOnboarding = (startSeed: boolean) => {
+    markOnboardingSeen()
+    setShowOnboarding(false)
+    if (startSeed) navigate('/learn/s1') // curated seed → instant offline first session
+  }
+
   const handleQuickStart = () => {
     if (quickInput.trim()) {
       navigate('/learn/custom', { state: { input: quickInput } })
@@ -87,6 +102,8 @@ export default function Home() {
 
   return (
     <div className="flex-1 flex flex-col">
+      {showOnboarding && <Onboarding onFinish={finishOnboarding} />}
+
       {/* Header */}
       <div className="px-6 pt-5 flex justify-between items-center">
         <img src="/logo.png" alt="Eng-ception" className="w-28 h-28 object-contain -ml-3 -my-6" />
