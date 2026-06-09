@@ -29,6 +29,10 @@ const FIX_CAUSATIVE_BARE: SessionPayload = {
     structure: '주어 + 동사 + 목적어 + 동사원형/형용사',
     triggerVerb: 'make',
   },
+  recognition: {
+    isFiveHMoment: true,
+    cue: '목적어의 결과/상태(화난 상태)까지 한 번에 말할 때 → 사역 5형식',
+  },
   empathy: {
     echo: '그가 화내게 만들었어...',
     message: '말 한마디로 분위기 확 바뀌었지',
@@ -51,15 +55,16 @@ const FIX_CAUSATIVE_BARE: SessionPayload = {
     explanation: "한국어는 '그가' 먼저 나오지만, 영어에선 '내가 만들었다'가 앞으로 와.",
     comparison: {
       show: true,
-      label: '왜 5형식이 자연스러운가',
-      sansPattern: {
-        en: 'I caused his anger.',
-        whyAwkward: "한국어를 단어 단위로 옮기면 이렇게 돼. 사건과 결과가 분리돼서 어색해.",
-      },
-      withPattern: {
+      label: '5형식이 나은가, 간결형이 나은가',
+      fiveH: {
         en: 'I made him angry.',
-        whyNatural: "사역동사 'make'로 사건과 결과를 한 문장에 평평하게. 영어가 좋아하는 구조.",
+        note: "사역동사 'make'로 사건과 결과를 한 문장에 평평하게. 영어가 좋아하는 구조.",
       },
+      simpler: {
+        en: 'I caused his anger.',
+        note: '단어 단위 직역. 사건과 결과가 분리돼 어색해.',
+      },
+      betterChoice: 'fiveH',
     },
     patternQuiz: {
       question: '이 문장에서 5형식 트리거 동사는?',
@@ -122,6 +127,10 @@ const FIX_PERCEPTION: SessionPayload = {
     structure: '주어 + 지각동사 + 목적어 + 동사원형/V-ing',
     triggerVerb: 'see',
   },
+  recognition: {
+    isFiveHMoment: true,
+    cue: '본 장면(누가 무엇을 하는지)을 그대로 전할 때 → 지각동사 5형식',
+  },
   empathy: {
     echo: '그녀가 우는 걸 봤어...',
     message: '말로 표현하기 묘한 장면이지',
@@ -144,15 +153,16 @@ const FIX_PERCEPTION: SessionPayload = {
     explanation: "한국어는 '우는 걸 봤어'로 명사화하지만 영어는 'saw her cry'로 동사를 그대로.",
     comparison: {
       show: true,
-      label: '왜 5형식이 자연스러운가',
-      sansPattern: {
-        en: 'I saw that she was crying.',
-        whyAwkward: 'that절은 문어체. 회화에선 무겁고 늘어져.',
-      },
-      withPattern: {
+      label: '5형식이 나은가, 간결형이 나은가',
+      fiveH: {
         en: 'I saw her cry.',
-        whyNatural: '지각동사+목적어+동사원형. 장면을 한 호흡에 담는 영어식 압축.',
+        note: '지각동사+목적어+동사원형. 장면을 한 호흡에 담는 영어식 압축.',
       },
+      simpler: {
+        en: 'I saw that she was crying.',
+        note: 'that절은 문어체. 회화에선 무겁고 늘어져.',
+      },
+      betterChoice: 'fiveH',
     },
     patternQuiz: {
       question: '이 문장에서 5형식 트리거 동사는?',
@@ -215,6 +225,10 @@ const FIX_DITRANSITIVE: SessionPayload = {
     structure: '주어 + 동사 + 간접목적어 + 직접목적어',
     triggerVerb: 'tell',
   },
+  recognition: {
+    isFiveHMoment: true,
+    cue: '사람에게 무엇을 주거나 말해줄 때 → 수여동사 4형식',
+  },
   empathy: {
     echo: '그 사실을 알려줘...',
     message: '솔직히 듣고 싶을 때가 있지',
@@ -237,15 +251,16 @@ const FIX_DITRANSITIVE: SessionPayload = {
     explanation: "한국어는 '~을 ~해 줘'로 끝나지만, 영어는 'tell me the truth'처럼 동사부터 간접목적어, 직접목적어.",
     comparison: {
       show: true,
-      label: '왜 4형식(수여동사)이 자연스러운가',
-      sansPattern: {
-        en: 'Give the truth to me.',
-        whyAwkward: '문법은 맞지만, 일상 영어에선 더 짧은 4형식이 압도적으로 자연스러워.',
-      },
-      withPattern: {
+      label: '4형식이 나은가, 풀어 쓰는 게 나은가',
+      fiveH: {
         en: 'Tell me the truth.',
-        whyNatural: "수여동사 + 간접목적어(me) + 직접목적어(the truth). 두 목적어를 그대로 붙여.",
+        note: '수여동사 + 간접목적어(me) + 직접목적어(the truth). 두 목적어를 그대로 붙여.',
       },
+      simpler: {
+        en: 'Give the truth to me.',
+        note: '문법은 맞지만, 일상 영어에선 더 짧은 4형식이 압도적으로 자연스러워.',
+      },
+      betterChoice: 'fiveH',
     },
     patternQuiz: {
       question: '이 문장에서 4형식 동사로 가장 자연스러운 건?',
@@ -296,6 +311,93 @@ const FIX_DITRANSITIVE: SessionPayload = {
     patternId: 'ditransitive',
     tags: ['부탁', '솔직 요청'],
   },
+}
+
+// v9.1 — a NON-5형식 moment: the natural English is simpler, and forcing a 5형식 would be
+// overkill. Exported for tests; kept OUT of the random FIXTURES rotation so the e2e (which
+// hashes over the 3 moment fixtures) stays deterministic.
+export const FIX_SIMPLER: SessionPayload = {
+  structureType: { id: 'impression', label: '분위기 인상', category: '묘사/인상' },
+  recognition: {
+    isFiveHMoment: false,
+    cue: '단순한 인상/상태 전달은 5형식이 과해 — 간결형이 자연',
+  },
+  pattern5h: null,
+  empathy: { echo: '그냥 거기 앉아 있기 좋았어...', message: '그 느낌, 꾸밈없이 말해도 충분해' },
+  precheck: {
+    question: '이걸 영어로 말한다면 뭐부터 꺼낼 것 같아?',
+    choices: [
+      { id: 'first', label: '느낌부터', preview: 'It was nice…' },
+      { id: 'second', label: '장소부터', preview: 'That place…' },
+    ],
+    correctChoiceId: 'first',
+  },
+  structure: {
+    parts: [
+      { text: '그냥 거기 ', role: 'second' },
+      { text: '앉아 있기 ', role: 'pivot' },
+      { text: '좋았어', role: 'first' },
+    ],
+    coreStructure: ['장소', '행위', '느낌'],
+    explanation: "단순한 인상은 'It was nice to ~'로 가볍게. 5형식으로 만들 필요가 없어.",
+    comparison: {
+      show: true,
+      label: '5형식이 나은가, 간결형이 나은가',
+      fiveH: {
+        en: 'I found it a nice place to sit.',
+        note: 'find + 목적어 + 보어로 만들 순 있지만 거추장스럽고 과해.',
+      },
+      simpler: {
+        en: 'It was nice to just sit there.',
+        note: '간결한 형태가 더 가볍고 자연스러워. 여긴 이게 정답.',
+      },
+      betterChoice: 'simpler',
+    },
+    patternQuiz: {
+      question: '이 상황, 5형식이 필요할까?',
+      options: [
+        { id: 'a', text: '5형식으로 끌어올려', hint: '억지로 find/make를 쓰면 과해', isCorrect: false },
+        { id: 'b', text: '간결하게 그대로', hint: '단순 인상은 간결형이 정답', isCorrect: true },
+        { id: 'unsure', text: '잘 모르겠어', hint: '', isCorrect: false },
+      ],
+      feedback: '간결형이 정답. 모든 걸 5형식으로 만들 필욘 없어 — 단순 인상은 단순하게.',
+    },
+  },
+  assembly: {
+    // 2-block 간결형 — exercises the blocks 2..3 relaxation across store + UI.
+    blocks: [
+      { id: 'b1', en: 'It was nice', order: 1 },
+      { id: 'b2', en: 'to just sit there', order: 2 },
+    ],
+    blockRoles: ['subject', 'complement'],
+    connectors: [
+      { id: 'period', label: '.', meaning: '한 문장으로 마무리', isCorrect: true },
+      { id: 'and', label: 'and', meaning: '내용 추가용', isCorrect: false },
+    ],
+    finalSentence: 'It was nice to just sit there.',
+  },
+  feedback: {
+    correctTitle: '맞았어',
+    correctSub: '간결형이 정답 — 5형식 안 써도 자연',
+    wrongTitle: '아쉬워',
+    wrongSub: '여긴 간결하게 가는 게 핵심',
+    explanation: '모든 문장을 5형식으로 만들 필요는 없어. 단순 인상엔 간결형이 더 자연스럽고 가벼워.',
+    wordOrder: {
+      korean: [
+        { label: '거기', role: 'second' },
+        { label: '앉아 있기', role: 'pivot' },
+        { label: '좋았어', role: 'first' },
+      ],
+      english: [
+        { label: 'It was nice', role: 'first' },
+        { label: 'to just sit there', role: 'second' },
+      ],
+      reversed: false,
+      keyInsight: '간결형은 어순도 단순 — 굳이 뒤집을 5형식 구조가 없어.',
+    },
+    patternNote: "단순 인상엔 5형식 X. 'It was nice to ~'로 가볍게. (5형식은 결과·상태 말할 때 아껴)",
+  },
+  pattern: null,
 }
 
 const FIXTURES: SessionPayload[] = [FIX_CAUSATIVE_BARE, FIX_PERCEPTION, FIX_DITRANSITIVE]

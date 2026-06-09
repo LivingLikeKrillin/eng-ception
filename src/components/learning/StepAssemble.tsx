@@ -60,7 +60,7 @@ export default function StepAssemble() {
     roleByBlockId.set(b.id, payload.assembly.blockRoles[b.order - 1])
   }
 
-  const blocksComplete = blockOrder.length === 3
+  const blocksComplete = blockOrder.length === payload.assembly.blocks.length
   const canAdvance = blocksComplete && connectorChoice !== null
 
   return (
@@ -140,7 +140,7 @@ export default function StepAssemble() {
         </p>
         <p className="text-[13px] text-t2 leading-relaxed font-en mb-2">{previewText}</p>
         <p className="text-[11px] text-t3 font-en">
-          선택됨: <span className="tabular-nums">{blockOrder.length}/3</span>
+          선택됨: <span className="tabular-nums">{blockOrder.length}/{payload.assembly.blocks.length}</span>
           {connectorChoice && ` · ${connectorChoice}`}
         </p>
       </div>

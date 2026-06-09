@@ -197,7 +197,7 @@ describe('learningStore complete()', () => {
 
     expect(saveSpy).toHaveBeenCalledTimes(1)
     const record = saveSpy.mock.calls[0][0]
-    expect(record.schemaVersion).toBe(5)
+    expect(record.schemaVersion).toBe(6)
     expect(record.pattern5hId).toBeDefined()
     expect(record.triggerVerb).toBeDefined()
     expect(record.patternQuizCorrect).toBe(true)
@@ -288,14 +288,14 @@ describe('learningStore end-to-end walkthrough', () => {
 
     expect(patternSpy).toHaveBeenCalledTimes(1)
     const pattern = patternSpy.mock.calls[0][0]
-    expect(pattern.patternId).toBe(payload.pattern.patternId)
-    expect(pattern.triggerVerb).toBe(payload.pattern5h.triggerVerb)
+    expect(pattern.patternId).toBe(payload.pattern!.patternId)
+    expect(pattern.triggerVerb).toBe(payload.pattern5h!.triggerVerb)
     expect(pattern.exampleEnglish).toBe(payload.assembly.finalSentence)
 
     expect(recordSpy).toHaveBeenCalledTimes(1)
     const record = recordSpy.mock.calls[0][0]
-    expect(record.schemaVersion).toBe(5)
-    expect(record.pattern5hId).toBe(payload.pattern5h.id)
+    expect(record.schemaVersion).toBe(6)
+    expect(record.pattern5hId).toBe(payload.pattern5h!.id)
     expect(record.assemblyCorrect).toBe(true)
     expect(record.patternQuizCorrect).toBe(true)
   })
@@ -446,8 +446,8 @@ describe('learningStore event tracking', () => {
     // capture by the captured sid (state is reset by now)
     const complete = mem.events.find((e) => e.sessionId === sid && e.name === 'session_complete')!
     expect(complete).toBeDefined()
-    expect(complete.props.pattern5hId).toBe(payload.pattern5h.id)
-    expect(complete.props.triggerVerb).toBe(payload.pattern5h.triggerVerb)
+    expect(complete.props.pattern5hId).toBe(payload.pattern5h!.id)
+    expect(complete.props.triggerVerb).toBe(payload.pattern5h!.triggerVerb)
     expect(complete.props.patternQuizCorrect).toBe(true)
     expect(complete.props.patternQuizUnsure).toBe(false)
     expect(typeof complete.props.durationMs).toBe('number')
@@ -580,8 +580,8 @@ describe('complete() applies FSRS schedule', () => {
   it('bumps bypassedCount on other due cards and not on the played card', async () => {
     const { mockSessionPayload } = await import('../services/mocks')
     const payload = await mockSessionPayload('seed')
-    const pid = payload.pattern5h.id
-    const verb = payload.pattern5h.triggerVerb
+    const pid = payload.pattern5h!.id
+    const verb = payload.pattern5h!.triggerVerb
 
     // One other due card (different key) + the played card itself (should be RESET not bumped)
     const otherCard = {
@@ -630,8 +630,8 @@ describe('complete() applies FSRS schedule', () => {
   it('does NOT bump the played card via bypass loop even if getPatterns includes it', async () => {
     const { mockSessionPayload } = await import('../services/mocks')
     const payload = await mockSessionPayload('seed')
-    const pid = payload.pattern5h.id
-    const verb = payload.pattern5h.triggerVerb
+    const pid = payload.pattern5h!.id
+    const verb = payload.pattern5h!.triggerVerb
 
     const playedCard = {
       id: 'played',
@@ -691,5 +691,27 @@ describe('complete() applies FSRS schedule', () => {
     await useLearningStore.getState().complete()
     expect(saveSpy).not.toHaveBeenCalled()
     expect(useLearningStore.getState().currentStep).toBe('input')
+  })
+
+  // v9.1: a 간결형 (non-moment) session logs a record but saves/advances NO 5형식 card.
+  it('간결형 session: no pattern saved, no SRS card, record isFiveHMoment=false + null pattern', async () => {
+    const { FIX_SIMPLER } = await import('../services/mocks')
+    const savePattern = vi.spyOn(db, 'savePattern').mockResolvedValue(undefined)
+    const saveRecord = vi.spyOn(db, 'saveLearningRecord').mockResolvedValue(undefined)
+    const update = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
+    vi.spyOn(db, 'getPattern').mockResolvedValue(null)
+    vi.spyOn(db, 'getPatterns').mockResolvedValue([])
+    vi.mocked(fetchSessionPayload).mockResolvedValueOnce(FIX_SIMPLER)
+
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await flushToComplete(store)
+
+    expect(savePattern).not.toHaveBeenCalled()  // no 5형식 card
+    expect(update).not.toHaveBeenCalled()        // applyReview not invoked
+    const rec = saveRecord.mock.calls[0][0]
+    expect(rec.isFiveHMoment).toBe(false)
+    expect(rec.pattern5hId).toBeNull()
+    expect(rec.triggerVerb).toBeNull()
   })
 })

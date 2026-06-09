@@ -17,13 +17,14 @@ export interface Scenario {
 
 export interface LearningRecord {
   id: string
-  schemaVersion: 4 | 5
+  schemaVersion: 4 | 5 | 6
   scenarioId: string | null
   originalKorean: string
   structureTypeId: string
   structureTypeLabel: string
-  pattern5hId: Pattern5HId        // NEW (v9): which 5형식 pattern this session trained
-  triggerVerb: string             // NEW (v9): the verb used
+  isFiveHMoment: boolean          // NEW (v9.1): was a 5형식 the right answer for this input?
+  pattern5hId: Pattern5HId | null // NEW (v9): pattern trained; null when !isFiveHMoment (간결형)
+  triggerVerb: string | null      // NEW (v9): verb used; null when !isFiveHMoment
   finalSentence: string
   precheckChoice: string | null
   afterChoice: string | null

@@ -205,9 +205,10 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
     },
 
     tapBlock(blockId) {
-      const { blockOrder } = get()
-      // Once all 3 slots are filled the arrangement is locked — use 다시 (resetBlockOrder) to redo.
-      if (blockOrder.length >= 3) return
+      const { blockOrder, payload } = get()
+      const max = payload?.assembly.blocks.length ?? 3
+      // Once all slots are filled the arrangement is locked — use 다시 (resetBlockOrder) to redo.
+      if (blockOrder.length >= max) return
       if (blockOrder.includes(blockId)) {
         set({ blockOrder: blockOrder.filter((id) => id !== blockId) })
       } else {
@@ -234,21 +235,24 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         transitionTo('step3')
         return
       }
-      const pattern: Pattern = {
-        id: crypto.randomUUID(),
-        template: s.payload.pattern.template,
-        patternId: s.payload.pattern.patternId,
-        triggerVerb: s.payload.pattern5h.triggerVerb,
-        category: s.payload.structureType.category,
-        tags: s.payload.pattern.tags,
-        exampleOriginal: s.originalKorean,
-        exampleEnglish: s.payload.assembly.finalSentence,
-        savedAt: new Date().toISOString(),
-        reviewCount: 0,
-        lastReviewedAt: null,
-        ...newCardDefaults(),
+      // Only a 5형식 moment produces a drillable pattern card; 간결형 sessions save nothing.
+      if (s.payload.recognition.isFiveHMoment && s.payload.pattern && s.payload.pattern5h) {
+        const pattern: Pattern = {
+          id: crypto.randomUUID(),
+          template: s.payload.pattern.template,
+          patternId: s.payload.pattern.patternId,
+          triggerVerb: s.payload.pattern5h.triggerVerb,
+          category: s.payload.structureType.category,
+          tags: s.payload.pattern.tags,
+          exampleOriginal: s.originalKorean,
+          exampleEnglish: s.payload.assembly.finalSentence,
+          savedAt: new Date().toISOString(),
+          reviewCount: 0,
+          lastReviewedAt: null,
+          ...newCardDefaults(),
+        }
+        await db.savePattern(pattern)
       }
-      await db.savePattern(pattern)
       set({ patternSaved: true })
       transitionTo('step3')
     },
@@ -281,14 +285,18 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
 
       // Compute the dual signals once and reuse (R1) — record, telemetry, and grade
       // must agree, and isAssemblyCorrect/the quiz reads were duplicated 3× before.
+      const moment = s.payload.recognition.isFiveHMoment
+      const pid = s.payload.pattern5h?.id ?? null
+      const verb = s.payload.pattern5h?.triggerVerb ?? null
       const assemblyCorrect = isAssemblyCorrect(s)
       const patternQuizCorrect = s.patternQuizAnswer?.correct === true
       const patternQuizUnsure = s.patternQuizAnswer?.unsure === true
 
       if (s.sessionId) {
         track('session_complete', {
-          pattern5hId: s.payload.pattern5h.id,
-          triggerVerb: s.payload.pattern5h.triggerVerb,
+          isFiveHMoment: moment,
+          pattern5hId: pid,
+          triggerVerb: verb,
           assemblyCorrect,
           patternQuizCorrect,
           patternQuizUnsure,
@@ -298,13 +306,14 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
 
       const record: LearningRecord = {
         id: crypto.randomUUID(),
-        schemaVersion: 5,
+        schemaVersion: 6,
         scenarioId: s.scenario?.id ?? null,
         originalKorean: s.originalKorean,
         structureTypeId: s.payload.structureType.id,
         structureTypeLabel: s.payload.structureType.label,
-        pattern5hId: s.payload.pattern5h.id,
-        triggerVerb: s.payload.pattern5h.triggerVerb,
+        isFiveHMoment: moment,
+        pattern5hId: pid,
+        triggerVerb: verb,
         finalSentence: s.payload.assembly.finalSentence,
         precheckChoice: s.precheckChoice,
         afterChoice: s.afterChoice,
@@ -321,10 +330,12 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
       try {
         await db.saveLearningRecord(record)
 
-        // --- SRS: grade this session and advance the card's schedule (+ N-bypass bookkeeping).
-        // Shared with offline recall via applyReview. ---
-        const grade = gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure })
-        await applyReview(s.payload.pattern5h.id, s.payload.pattern5h.triggerVerb, grade, new Date())
+        // --- SRS: only a 5형식 moment has a drillable card to advance (shared via applyReview).
+        // 간결형 sessions still log a record (above) but create/advance no card. ---
+        if (moment && s.payload.pattern5h) {
+          const grade = gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure })
+          await applyReview(s.payload.pattern5h.id, s.payload.pattern5h.triggerVerb, grade, new Date())
+        }
       } catch (e) {
         console.error('complete() persist failed', e)
       }
@@ -336,7 +347,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
 
 export function isAssemblyCorrect(s: V9LearningState): boolean {
   const { payload, blockOrder, connectorChoice } = s
-  if (!payload || blockOrder.length !== 3) return false
+  if (!payload || blockOrder.length !== payload.assembly.blocks.length) return false
   const correctOrder = [...payload.assembly.blocks]
     .sort((a, b) => a.order - b.order)
     .map((b) => b.id)

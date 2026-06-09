@@ -12,7 +12,7 @@ function rec(completedAt: string, scenarioId: string | null = null): LearningRec
   return {
     id: `r-${completedAt}-${scenarioId}`, schemaVersion: 5, scenarioId,
     originalKorean: 'x', structureTypeId: 's', structureTypeLabel: 'S',
-    pattern5hId: 'causative-bare', triggerVerb: 'make', finalSentence: 'x',
+    isFiveHMoment: true, pattern5hId: 'causative-bare', triggerVerb: 'make', finalSentence: 'x',
     precheckChoice: null, afterChoice: null, patternQuizCorrect: true,
     patternQuizUnsure: false, assemblyCorrect: true, completedAt,
   }

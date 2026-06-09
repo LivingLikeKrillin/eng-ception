@@ -27,7 +27,7 @@ describe('mockSessionPayload', () => {
     const results = await Promise.all(
       Array.from({ length: 30 }, (_, i) => mockSessionPayload(`input-${i}`)),
     )
-    const ids = new Set(results.map((p) => p.pattern5h.id))
+    const ids = new Set(results.map((p) => p.pattern5h?.id))
     expect(ids.has('causative-bare')).toBe(true)
     expect(ids.has('perception')).toBe(true)
     expect(ids.has('ditransitive')).toBe(true)

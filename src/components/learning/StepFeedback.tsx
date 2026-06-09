@@ -31,20 +31,29 @@ export default function StepFeedback() {
         <WordOrderCompare wordOrder={payload.feedback.wordOrder} />
       </div>
 
-      {/* NEW (v9): 자동성 노트 */}
+      {/* 자동성 노트 — 5형식 모먼트면 패턴 노트, 아니면 인식 노트 */}
       <div className="fu3">
-        <PatternNoteCard
-          patternLabel={payload.pattern5h.label}
-          triggerVerb={payload.pattern5h.triggerVerb}
-          note={payload.feedback.patternNote}
-        />
+        {payload.pattern5h ? (
+          <PatternNoteCard
+            patternLabel={payload.pattern5h.label}
+            triggerVerb={payload.pattern5h.triggerVerb}
+            note={payload.feedback.patternNote}
+          />
+        ) : (
+          <div className="bg-c rounded-[16px] p-5 border border-line">
+            <p className="text-[11px] font-semibold text-t3 font-en tracking-wider uppercase mb-2">
+              인식 노트
+            </p>
+            <p className="text-[13px] text-t2 leading-relaxed">{payload.feedback.patternNote}</p>
+          </div>
+        )}
       </div>
 
       <button
         onClick={() => void advanceToStep3()}
         className="pressable w-full h-[52px] rounded-[14px] bg-accent text-white text-[15px] font-semibold shadow-[0_4px_20px_rgba(139,139,245,0.25)] transition-all fu4"
       >
-        이 패턴 내 걸로 만들기
+        {payload.pattern5h ? '이 패턴 내 걸로 만들기' : '확인'}
       </button>
     </div>
   )

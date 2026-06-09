@@ -2,7 +2,7 @@ import {
   fsrs, generatorParameters, createEmptyCard,
   State, type Card, type Grade as TsGrade,
 } from 'ts-fsrs'
-import type { Pattern } from '../types'
+import type { Pattern, LearningRecord } from '../types'
 
 // Our public grade is the same 1|2|3|4, but ts-fsrs's next() wants its own `Grade`
 // type (= Exclude<Rating, Manual>). `grade as Rating` does NOT satisfy it — we cast to
@@ -71,6 +71,11 @@ export function newCardDefaults(): SrsFields {
 // FSRS fields are filled. Shared by both adapters (localStorage + Firestore) so
 // every read is self-defending, not reliant on a one-time init() migration.
 export const withSrsDefaults = (p: Pattern): Pattern => ({ ...newCardDefaults(), ...p })
+
+// v6 (v9.1): records gained isFiveHMoment. Pre-v6 records were all 5형식 → default true.
+// Defaults spread FIRST so the record's own value wins when present. Shared by both adapters.
+const RECORD_DEFAULTS = { isFiveHMoment: true } as const
+export const withRecordDefaults = (r: LearningRecord): LearningRecord => ({ ...RECORD_DEFAULTS, ...r })
 
 const STATE_TO_TS: Record<CardStateName, State> = {
   new: State.New, learning: State.Learning, review: State.Review, relearning: State.Relearning,

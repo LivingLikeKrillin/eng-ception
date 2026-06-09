@@ -12,6 +12,7 @@ function validPayload(): SessionPayload {
       structure: '주어 + 동사 + 목적어 + 동사원형',
       triggerVerb: 'make',
     },
+    recognition: { isFiveHMoment: true, cue: '결과/상태까지 말할 때 → 5형식' },
     empathy: { echo: '...', message: '아, 이거 진짜 답답하지' },
     precheck: {
       question: '뭐부터?',
@@ -30,9 +31,10 @@ function validPayload(): SessionPayload {
       explanation: 'x',
       comparison: {
         show: true,
-        label: '왜 5형식이 자연스러운가',
-        sansPattern: { en: 'I caused his anger.', whyAwkward: 'x' },
-        withPattern: { en: 'I made him angry.', whyNatural: 'x' },
+        label: '5형식이 나은가, 간결형이 나은가',
+        fiveH: { en: 'I made him angry.', note: 'x' },
+        simpler: { en: 'I caused his anger.', note: 'x' },
+        betterChoice: 'fiveH',
       },
       patternQuiz: {
         question: '5형식 트리거 동사는?',
@@ -94,19 +96,19 @@ describe('assertSessionPayload', () => {
   it('throws when pattern5h.id is not in the 7-pattern taxonomy', () => {
     const p = validPayload()
     // @ts-expect-error test
-    p.pattern5h.id = 'not-a-pattern'
+    p.pattern5h!.id = 'not-a-pattern'
     expect(() => assertSessionPayload(p)).toThrow(/pattern5h\.id must be one of/)
   })
 
   it('throws when pattern5h.triggerVerb is not in the curated verb set for that id', () => {
     const p = validPayload()
-    p.pattern5h.triggerVerb = 'deem'  // not in CURATED_VERBS['causative-bare']
+    p.pattern5h!.triggerVerb = 'deem'  // not in CURATED_VERBS['causative-bare']
     expect(() => assertSessionPayload(p)).toThrow(/triggerVerb 'deem' not in curated verbs/)
   })
 
   it('throws when pattern5h.verbs is empty', () => {
     const p = validPayload()
-    p.pattern5h.verbs = []
+    p.pattern5h!.verbs = []
     expect(() => assertSessionPayload(p)).toThrow(/pattern5h\.verbs must be non-empty/)
   })
 
@@ -144,16 +146,16 @@ describe('assertSessionPayload', () => {
   })
 
   // === assembly ===
-  it('throws when blocks length is not 3', () => {
+  it('throws when blocks length is outside 2..3', () => {
     const p = validPayload()
-    p.assembly.blocks = p.assembly.blocks.slice(0, 2)
-    expect(() => assertSessionPayload(p)).toThrow(/blocks must be exactly 3/)
+    p.assembly.blocks = p.assembly.blocks.slice(0, 1)
+    expect(() => assertSessionPayload(p)).toThrow(/blocks must be 2..3/)
   })
 
-  it('throws when block orders are not 1/2/3', () => {
+  it('throws when block orders are not 1..N sequential', () => {
     const p = validPayload()
     p.assembly.blocks[0].order = 5 as 1
-    expect(() => assertSessionPayload(p)).toThrow(/block orders must be 1\/2\/3/)
+    expect(() => assertSessionPayload(p)).toThrow(/block orders must be 1..N sequential/)
   })
 
   it('throws when block ids are not unique', () => {
@@ -162,10 +164,10 @@ describe('assertSessionPayload', () => {
     expect(() => assertSessionPayload(p)).toThrow(/block ids must be unique/)
   })
 
-  it('throws when blockRoles length is not 3', () => {
+  it('throws when blockRoles length != blocks length', () => {
     const p = validPayload()
     p.assembly.blockRoles = ['subject', 'verb']
-    expect(() => assertSessionPayload(p)).toThrow(/blockRoles must have length 3/)
+    expect(() => assertSessionPayload(p)).toThrow(/blockRoles length must equal blocks length/)
   })
 
   it('throws when blockRoles contains an unknown role', () => {
@@ -224,13 +226,87 @@ describe('assertSessionPayload', () => {
   // === pattern ===
   it('throws when pattern.template is empty', () => {
     const p = validPayload()
-    p.pattern.template = ''
+    p.pattern!.template = ''
     expect(() => assertSessionPayload(p)).toThrow(/pattern incomplete/)
   })
 
   it("throws when pattern.patternId doesn't match pattern5h.id", () => {
     const p = validPayload()
-    p.pattern.patternId = 'judgment'
+    p.pattern!.patternId = 'judgment'
     expect(() => assertSessionPayload(p)).toThrow(/pattern\.patternId must equal pattern5h\.id/)
+  })
+
+  // === v9.1 recognition discriminant ===
+  it('throws when recognition.isFiveHMoment is not boolean', () => {
+    const p = validPayload()
+    // @ts-expect-error test
+    p.recognition.isFiveHMoment = 'yes'
+    expect(() => assertSessionPayload(p)).toThrow(/recognition\.isFiveHMoment must be boolean/)
+  })
+
+  it('throws when recognition.cue is empty', () => {
+    const p = validPayload()
+    p.recognition.cue = ''
+    expect(() => assertSessionPayload(p)).toThrow(/recognition\.cue required/)
+  })
+
+  it('throws when a moment has null pattern5h', () => {
+    const p = validPayload()
+    p.pattern5h = null
+    expect(() => assertSessionPayload(p)).toThrow(/pattern5h\.id must be one of/)
+  })
+
+  it('throws when betterChoice disagrees with isFiveHMoment', () => {
+    const p = validPayload()
+    p.structure.comparison.betterChoice = 'simpler' // but isFiveHMoment is true
+    expect(() => assertSessionPayload(p)).toThrow(/betterChoice must agree/)
+  })
+
+  it('accepts a 2-block payload', () => {
+    const p = validPayload()
+    p.assembly.blocks = [
+      { id: 'b1', en: 'It', order: 1 },
+      { id: 'b2', en: 'lingered', order: 2 },
+    ]
+    p.assembly.blockRoles = ['subject', 'verb']
+    p.assembly.finalSentence = 'It lingered.'
+    expect(() => assertSessionPayload(p)).not.toThrow()
+  })
+})
+
+// === v9.1 간결형 (non-moment) payloads ===
+function simplerPayload(): SessionPayload {
+  const p = validPayload()
+  p.recognition = { isFiveHMoment: false, cue: '단순 인상은 간결형이 정답' }
+  p.pattern5h = null
+  p.pattern = null
+  p.structure.comparison.betterChoice = 'simpler'
+  p.structure.patternQuiz = {
+    question: '여기 5형식 필요?',
+    options: [
+      { id: 'a', text: '5형식으로', hint: '과함', isCorrect: false },
+      { id: 'b', text: '간결하게', hint: '정답', isCorrect: true },
+      { id: 'unsure', text: '잘 모르겠어', hint: '', isCorrect: false },
+    ],
+    feedback: '간결형이 정답',
+  }
+  return p
+}
+
+describe('assertSessionPayload — 간결형 (non-moment)', () => {
+  it('accepts a valid simpler payload (pattern5h/pattern null)', () => {
+    expect(() => assertSessionPayload(simplerPayload())).not.toThrow()
+  })
+
+  it('throws when a non-moment still carries a pattern5h', () => {
+    const p = simplerPayload()
+    p.pattern5h = validPayload().pattern5h
+    expect(() => assertSessionPayload(p)).toThrow(/pattern5h must be null/)
+  })
+
+  it('throws when a non-moment still carries a pattern', () => {
+    const p = simplerPayload()
+    p.pattern = validPayload().pattern
+    expect(() => assertSessionPayload(p)).toThrow(/pattern must be null/)
   })
 })
