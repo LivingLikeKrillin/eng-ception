@@ -37,6 +37,15 @@ describe('dueQueue ordering', () => {
   })
 })
 
+describe('dueQueue null-safety', () => {
+  it('does not throw when a due card is missing savedAt (backfill omits it)', () => {
+    const a = card({ triggerVerb: 'make', nextDueAt: null, savedAt: undefined as unknown as string })
+    const b = card({ triggerVerb: 'have', nextDueAt: null })
+    expect(() => dueQueue([a, b], NOW)).not.toThrow()
+    expect(dueQueue([a, b], NOW)).toHaveLength(2)
+  })
+})
+
 describe('masteryLabel', () => {
   it('새내기 when reps 0', () => {
     expect(masteryLabel(card({ reps: 0 }))).toBe('새내기')

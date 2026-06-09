@@ -115,7 +115,9 @@ export default function Review() {
                     <button
                       onClick={() => {
                         if (r.scenarioId) navigate(`/learn/${r.scenarioId}`)
-                        else navigate('/learn/custom')
+                        // Custom records ARE the core 복기 case — seed the Korean so the
+                        // user re-practices instead of facing an empty input screen.
+                        else navigate('/learn/custom', { state: { input: r.originalKorean } })
                       }}
                       className="text-[11px] text-accent font-semibold hover:opacity-80 transition"
                     >

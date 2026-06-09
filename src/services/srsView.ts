@@ -26,7 +26,9 @@ export function dueQueue(cards: Pattern[], now: Date): Pattern[] {
       if (aEsc !== bEsc) return bEsc - aEsc                  // escalated first
       const od = overdueMs(b, now) - overdueMs(a, now)        // most overdue first
       if (od !== 0) return od
-      return a.savedAt.localeCompare(b.savedAt)               // stable tiebreak: older first
+      // null-safe: withSrsDefaults backfills FSRS fields but NOT savedAt, so a card
+      // missing it must not throw and kill the whole Review render.
+      return (a.savedAt ?? '').localeCompare(b.savedAt ?? '') // stable tiebreak: older first
     })
 }
 

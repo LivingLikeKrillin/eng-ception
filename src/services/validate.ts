@@ -40,6 +40,10 @@ export function assertSessionPayload(x: unknown): asserts x is SessionPayload {
   if (orders[0] !== 1 || orders[1] !== 2 || orders[2] !== 3) {
     throw new Error('parse: block orders must be 1/2/3')
   }
+  // ids must be unique — duplicates would break isAssemblyCorrect/tapBlock (both key on id).
+  if (new Set(p.assembly.blocks.map((b) => b.id)).size !== 3) {
+    throw new Error('parse: block ids must be unique')
+  }
 
   // assembly.blockRoles
   if (!Array.isArray(p.assembly?.blockRoles) || p.assembly.blockRoles.length !== 3) {

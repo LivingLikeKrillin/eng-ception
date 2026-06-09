@@ -156,6 +156,12 @@ describe('assertSessionPayload', () => {
     expect(() => assertSessionPayload(p)).toThrow(/block orders must be 1\/2\/3/)
   })
 
+  it('throws when block ids are not unique', () => {
+    const p = validPayload()
+    p.assembly.blocks[1].id = p.assembly.blocks[0].id // duplicate id
+    expect(() => assertSessionPayload(p)).toThrow(/block ids must be unique/)
+  })
+
   it('throws when blockRoles length is not 3', () => {
     const p = validPayload()
     p.assembly.blockRoles = ['subject', 'verb']

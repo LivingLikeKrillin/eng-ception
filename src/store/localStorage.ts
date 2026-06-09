@@ -1,12 +1,9 @@
 import type { DataStore } from './dataStore'
 import type { Scenario, LearningRecord, Pattern } from '../types'
-import { newCardDefaults } from '../services/srs'
+import { withSrsDefaults } from '../services/srs'
 
 const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
 const CURRENT_SCHEMA_VERSION = 5
-
-// p already has its own values; spread defaults FIRST so p wins, filling only missing FSRS fields.
-const withSrsDefaults = (p: Pattern): Pattern => ({ ...newCardDefaults(), ...p })
 
 const KEYS = {
   scenarios: 'eng-ception:scenarios',
@@ -16,13 +13,31 @@ const KEYS = {
 
 const MAX_RECORDS = 100
 
+// Corrupt JSON (a truncated write after a prior quota failure, tampering) must not
+// throw — init() runs in the boot path before React renders, so an unguarded
+// JSON.parse here would blank the whole app. Treat a malformed key as empty and
+// drop it so the next write starts clean.
 function getItem<T>(key: string): T[] {
   const raw = localStorage.getItem(key)
-  return raw ? JSON.parse(raw) : []
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    try { localStorage.removeItem(key) } catch { /* ignore */ }
+    return []
+  }
 }
 
-function setItem<T>(key: string, data: T[]): void {
-  localStorage.setItem(key, JSON.stringify(data))
+// localStorage.setItem throws (QuotaExceededError) when full. Swallow it at the
+// adapter boundary: persistence degrades to in-memory for the session rather than
+// crashing the write path (and any caller awaiting it). Returns whether it stuck.
+function setItem<T>(key: string, data: T[]): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(data))
+    return true
+  } catch {
+    return false
+  }
 }
 
 export const localStorageAdapter: DataStore = {
@@ -100,7 +115,10 @@ export const localStorageAdapter: DataStore = {
   },
 
   async getPatterns() {
-    return getItem<Pattern>(KEYS.patterns)
+    // Self-defend with FSRS defaults (parity with the Firestore adapter) so a card
+    // that slipped past the init() migration never yields undefined counters → NaN
+    // in complete()'s bypass loop / dueQueue.
+    return getItem<Pattern>(KEYS.patterns).map(withSrsDefaults)
   },
 
   async deletePattern(id) {
@@ -110,7 +128,8 @@ export const localStorageAdapter: DataStore = {
 
   async getPattern(patternId, triggerVerb) {
     const patterns = getItem<Pattern>(KEYS.patterns)
-    return patterns.find((p) => p.patternId === patternId && p.triggerVerb === triggerVerb) ?? null
+    const card = patterns.find((p) => p.patternId === patternId && p.triggerVerb === triggerVerb)
+    return card ? withSrsDefaults(card) : null
   },
 
   async updatePatternSchedule(patternId, triggerVerb, partial) {

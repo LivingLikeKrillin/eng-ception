@@ -187,8 +187,12 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
 
     submitPrecheck(choiceId) {
       set({ precheckChoice: choiceId })
+      // Capture the session so an abandon→restart within 400ms can't let this stale
+      // timer force-advance the freshly started session.
+      const sid = get().sessionId
       setTimeout(() => {
-        if (get().currentStep === 'precheck') transitionTo('step0')
+        const s = get()
+        if (s.sessionId === sid && s.currentStep === 'precheck') transitionTo('step0')
       }, 400)
     },
 
@@ -259,18 +263,39 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
 
     async complete() {
       const s = get()
-      if (!s.payload) return
+
+      // No payload to persist — still terminate the session so a later
+      // visibilitychange can't fire a spurious session_abandon, and the store resets.
+      if (!s.payload) {
+        if (s.sessionId && !s.sessionEnded) set({ sessionEnded: true })
+        set(initial)
+        return
+      }
+
+      // Idempotency: a session completes exactly once. Guards a re-tap of the
+      // completion button (StepComplete stays mounted until navigate) from saving a
+      // duplicate record and double-advancing the FSRS card. Claimed synchronously
+      // before any await so a fast double-tap can't slip through.
+      if (s.sessionEnded) return
+      set({ sessionEnded: true })
+
+      // Compute the dual signals once and reuse (R1) — record, telemetry, and grade
+      // must agree, and isAssemblyCorrect/the quiz reads were duplicated 3× before.
+      const assemblyCorrect = isAssemblyCorrect(s)
+      const patternQuizCorrect = s.patternQuizAnswer?.correct === true
+      const patternQuizUnsure = s.patternQuizAnswer?.unsure === true
+
       if (s.sessionId) {
         track('session_complete', {
           pattern5hId: s.payload.pattern5h.id,
           triggerVerb: s.payload.pattern5h.triggerVerb,
-          assemblyCorrect: isAssemblyCorrect(s),
-          patternQuizCorrect: s.patternQuizAnswer?.correct === true,
-          patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
+          assemblyCorrect,
+          patternQuizCorrect,
+          patternQuizUnsure,
           durationMs: Date.now() - (s.sessionStartedAt ?? Date.now()),
         }, s.sessionId)
-        set({ sessionEnded: true })
       }
+
       const record: LearningRecord = {
         id: crypto.randomUUID(),
         schemaVersion: 5,
@@ -283,47 +308,53 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         finalSentence: s.payload.assembly.finalSentence,
         precheckChoice: s.precheckChoice,
         afterChoice: s.afterChoice,
-        patternQuizCorrect: s.patternQuizAnswer?.correct === true,
-        patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
-        assemblyCorrect: isAssemblyCorrect(s),
+        patternQuizCorrect,
+        patternQuizUnsure,
+        assemblyCorrect,
         completedAt: new Date().toISOString(),
       }
-      await db.saveLearningRecord(record)
 
-      // --- SRS: grade this session and advance the card's schedule ---
-      const pid = s.payload.pattern5h.id
-      const verb = s.payload.pattern5h.triggerVerb
-      const grade = gradeFromSignals({
-        assemblyCorrect: isAssemblyCorrect(s),
-        patternQuizCorrect: s.patternQuizAnswer?.correct === true,
-        patternQuizUnsure: s.patternQuizAnswer?.unsure === true,
-      })
-      const now = new Date()
-      const card = await db.getPattern(pid, verb)
-      const prev: CardSchedule | null = card
-        ? {
-            stability: card.stability, difficulty: card.difficulty,
-            cardState: card.cardState, reps: card.reps, lapses: card.lapses,
-            nextDueAt: card.nextDueAt, lastReviewedAt: card.lastReviewedAt,
-          }
-        : null
-      const next = schedule(prev, grade, now)
-      await db.updatePatternSchedule(pid, verb, {
-        ...next,
-        lastReviewedAt: now.toISOString(),
-        lastGrade: grade,
-        bypassedCount: 0, // reviewing a card clears its avoidance counter
-      })
+      // Persistence is wrapped: localStorage doesn't reject and Firestore queues
+      // offline, but a hard failure (quota, expired token) must not strand the user
+      // on the completion screen. The session is logically done + telemetry recorded;
+      // the idempotency guard above prevents a re-run from duplicating anything.
+      try {
+        await db.saveLearningRecord(record)
 
-      // --- SRS: bypass bookkeeping — bump other cards that were due at `now` ---
-      const all = await db.getPatterns()
-      const otherDue = all.filter(
-        (p) => isDue(p, now) && !(p.patternId === pid && p.triggerVerb === verb),
-      )
-      for (const p of otherDue) {
-        await db.updatePatternSchedule(p.patternId, p.triggerVerb, {
-          bypassedCount: p.bypassedCount + 1,
+        // --- SRS: grade this session and advance the card's schedule ---
+        const pid = s.payload.pattern5h.id
+        const verb = s.payload.pattern5h.triggerVerb
+        const grade = gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure })
+        const now = new Date()
+        const card = await db.getPattern(pid, verb)
+        const prev: CardSchedule | null = card
+          ? {
+              stability: card.stability, difficulty: card.difficulty,
+              cardState: card.cardState, reps: card.reps, lapses: card.lapses,
+              nextDueAt: card.nextDueAt, lastReviewedAt: card.lastReviewedAt,
+            }
+          : null
+        const next = schedule(prev, grade, now)
+        await db.updatePatternSchedule(pid, verb, {
+          ...next, // next already carries lastReviewedAt (R5)
+          lastGrade: grade,
+          bypassedCount: 0, // reviewing a card clears its avoidance counter
         })
+
+        // --- SRS: bypass bookkeeping — bump other cards that were due at `now` ---
+        const all = await db.getPatterns()
+        const otherDue = all.filter(
+          (p) => isDue(p, now) && !(p.patternId === pid && p.triggerVerb === verb),
+        )
+        await Promise.all(
+          otherDue.map((p) =>
+            db.updatePatternSchedule(p.patternId, p.triggerVerb, {
+              bypassedCount: p.bypassedCount + 1,
+            }),
+          ),
+        )
+      } catch (e) {
+        console.error('complete() persist failed', e)
       }
 
       set(initial)
