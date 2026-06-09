@@ -13,7 +13,9 @@ Eng-ception은 한국인이 영어로 말할 때 겪는 핵심 병목 — "머�
 
 ### v9 전략 축: 5형식(SVOC) 표현력
 
-v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학습자가 3형식 직역에 갇히는 게 가장 큰 구조적 병목이라는 가설(전문가 검증: Processability Theory Stage 5~6). 모든 학습 세션은 7개 5형식 패턴 중 정확히 하나를 표적으로 한다.
+v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학습자가 3형식 직역에 갇히는 게 가장 큰 구조적 병목이라는 가설(전문가 검증: Processability Theory Stage 5~6).
+
+**v9.1 정정 — 5형식 = 인식 스킬, 강제 아님.** 세션은 입력이 **"5형식 모먼트"인지 판정**(`recognition.isFiveHMoment`)한다. 맞으면 5형식으로 끌어올리며 *이런 단서면 5형식*을 가르치고, 아니면 **간결형이 정답임을 인정**하고 *왜 5형식이 과한지·그 단서*를 가르친다. 한국인의 진짜 결손은 "5형식이 나은 *상황 자체*를 인식 못 함"이므로 목표는 강제가 아니라 **인식**. 자연 영어가 3형식인 자리에 5형식을 욱여넣으면 학습자의 구조 판단력을 해친다 → 금지. 모먼트면 `pattern5h`/`pattern` 채우고 SRS 카드 생성, 비모먼트면 `pattern5h`/`pattern`=null + 카드 미생성(LearningRecord는 기록). 설계: `docs/superpowers/specs/2026-06-10-v9.1-recognition-design.md`.
 
 **범위(scope): 말하기·텍스트 전용 web PWA.** 듣기/오디오/TTS는 별도 제품(engul)으로 분리됨 — 이 앱에 오디오 없음. 네이티브(RN)는 보류.
 
@@ -24,7 +26,7 @@ v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학�
 - **상태 관리:** Zustand 5
 - **라우팅:** React Router 7
 - **AI:** Claude API (Anthropic) — Vercel Edge Function 또는 dev-server.js 프록시 (모델: `claude-sonnet-4-6`)
-- **저장소:** LocalStorage (현재, schema v5) → Firebase 마이그레이션 예정
+- **저장소:** LocalStorage (현재, schema v6) → Firebase 마이그레이션 예정
 - **SRS:** ts-fsrs 5.4.1 (간격 반복 스케줄러)
 - **테스트:** Vitest (단위/통합) + Playwright (e2e)
 - **배포:** Vercel (api/ 폴더 Edge Functions) + PWA (vite-plugin-pwa)
@@ -44,7 +46,7 @@ eng-ception/
 │   ├── App.tsx                   # 라우터 설정
 │   ├── index.css                 # Tailwind 임포트
 │   ├── types/
-│   │   ├── index.ts              # Scenario, LearningRecord(v4|v5), Pattern(+FSRS 필드)
+│   │   ├── index.ts              # Scenario, LearningRecord(v4|v5|v6), Capture, Pattern(+FSRS 필드)
 │   │   ├── v9.ts                 # V9Step, Pattern5HId, CURATED_VERBS(17), SessionPayload 등 v9 핵심 타입
 │   │   └── events.ts             # AnalyticsEvent 엔벨로프 + EventName union (이벤트 트래킹)
 │   ├── data/
@@ -66,7 +68,7 @@ eng-ception/
 │   ├── store/
 │   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화; +getPattern/updatePatternSchedule)
 │   │   ├── db.ts                 # 스왑 가능한 db 파사드 + setDbAdapter (setSink 평행; 7 소비자가 import)
-│   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v5; v4→v5 비파괴 마이그레이션)
+│   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v6; v4/v5→v6 비파괴 마이그레이션)
 │   │   ├── firestoreDataStore.ts # createFirestoreDataStore(fs,uid) — Firestore 어댑터 (withDefaults FSRS 백필)
 │   │   ├── analyticsSink.ts      # AnalyticsSink 인터페이스 + noop + MemoryAnalyticsSink
 │   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (eng-ception:events)
@@ -167,7 +169,7 @@ step4    : 완료
 
 ### `types/index.ts`
 - **Scenario:** 시드 시나리오 (situation, originalKorean, purpose, emotionalTone, difficulty, category, tags?, isDaily, createdAt)
-- **LearningRecord (schema v4|v5):** 세션 전체 기록. `schemaVersion: 4 | 5`(신규 기록은 5로 씀). 5형식 필드 — `pattern5hId`, `triggerVerb`; 시그널 — `patternQuizCorrect`, `patternQuizUnsure`(힌트 사용; correct=true와 공존 가능), `assemblyCorrect`; 선택 — `precheckChoice`, `afterChoice`; 결과 — `finalSentence`, `structureTypeId/Label`
+- **LearningRecord (schema v4|v5|v6):** 세션 전체 기록. `schemaVersion: 4 | 5 | 6`(신규 기록은 6으로 씀). **v9.1:** `isFiveHMoment`(boolean) 추가; `pattern5hId`·`triggerVerb`는 **nullable**(간결형 세션이면 null). 시그널 — `patternQuizCorrect`, `patternQuizUnsure`(힌트 사용; correct=true와 공존 가능), `assemblyCorrect`; 선택 — `precheckChoice`, `afterChoice`; 결과 — `finalSentence`, `structureTypeId/Label`. v4/v5 기록은 읽기 시 `withRecordDefaults`로 `isFiveHMoment=true` 백필(전부 5형식이었음).
 - **Pattern:** 재사용 가능한 발화 패턴. `template`(verb-specific "I made him ~"), `patternId`(Pattern5HId), `triggerVerb`(dedup 키), `category`, `tags`, `exampleOriginal/English`, `reviewCount`, `lastReviewedAt` + **FSRS 스케줄 필드(schema v5):** `stability`(일 단위, null=미스케줄), `difficulty`(1..10), `nextDueAt`(ISO, null→즉시 due), `reps`, `lapses`, `bypassedCount`(회피 카운터), `cardState`('new'|'learning'|'review'|'relearning'), `lastGrade`(1..4|null)
 
 ### `types/v9.ts`
@@ -193,10 +195,10 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 
 **currentStep 전환 방식:** API 응답 후 자동 전환하지 않고, 사용자가 화면을 확인한 뒤 다음 버튼을 누르면 스텝 컴포넌트가 위 advance 액션을 호출한다.
 
-## 저장소 (`store/localStorage.ts`, schema v5)
+## 저장소 (`store/localStorage.ts`, schema v6)
 
 - `DataStore` 인터페이스(`dataStore.ts`)로 영속화 추상화 → Firestore 어댑터가 `localStorage.ts` 옆에 슬롯인 가능. SRS 추가로 `getPattern(patternId, triggerVerb)` + `updatePatternSchedule(patternId, triggerVerb, partial)` 2개 신규 메서드.
-- `init()`: `CURRENT_SCHEMA_VERSION = 5`. 저장된 버전 < 5 이면 **v4→v5 비파괴 마이그레이션** — 기존 records/patterns 유지, 패턴에 FSRS 디폴트(`newCardDefaults()`) 백필. 버전 불일치 파괴(기존 v4 동작)와 달리 데이터 손실 없음.
+- `init()`: `CURRENT_SCHEMA_VERSION = 6`. 저장된 `'4'`/`'5'`이면 **비파괴 v4/v5→v6 마이그레이션** — records/patterns 유지, (v4면) 패턴 FSRS 디폴트 백필 + records에 `isFiveHMoment=true` 백필(`withRecordDefaults`, srs.ts 공유). 레거시(≤3)/미상만 파괴적 clear. `getLearningRecords`도 읽기 시 `withRecordDefaults` 적용(Firestore 어댑터도 동일).
 - **패턴 dedup: `patternId + triggerVerb` 복합키.** 같은 키 재저장 시 `reviewCount++` + `lastReviewedAt` 갱신 — SRS 하위 레이어 키로 사용됨.
 - `MAX_RECORDS = 100` (초과 시 오래된 기록부터 제거)
 

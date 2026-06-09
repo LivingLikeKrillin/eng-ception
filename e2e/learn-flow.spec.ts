@@ -67,7 +67,7 @@ test('v9 7-step learning flow renders end-to-end in mock mode', async ({ page })
   await page.getByRole('button', { name: '다음 문장으로' }).click()
   await expect(page).toHaveURL('http://localhost:5219/')
 
-  // --- Persistence: a verb-specific pattern + a v4 record landed in localStorage ---
+  // --- Persistence: a verb-specific pattern + a v6 record landed in localStorage ---
   const patternsRaw = await page.evaluate(() => localStorage.getItem('eng-ception:patterns'))
   const patterns = JSON.parse(patternsRaw ?? '[]')
   expect(patterns.length).toBeGreaterThanOrEqual(1)
@@ -77,6 +77,7 @@ test('v9 7-step learning flow renders end-to-end in mock mode', async ({ page })
   const recordsRaw = await page.evaluate(() => localStorage.getItem('eng-ception:records'))
   const records = JSON.parse(recordsRaw ?? '[]')
   expect(records.length).toBeGreaterThanOrEqual(1)
-  expect(records[0].schemaVersion).toBe(5)
+  expect(records[0].schemaVersion).toBe(6)
+  expect(records[0].isFiveHMoment).toBe(true)
   expect(records[0].pattern5hId).toBeTruthy()
 })
