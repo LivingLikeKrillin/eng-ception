@@ -42,6 +42,11 @@ export default function CircuitDiagnostic({ patterns, now }: Props) {
                 {PATTERN_LABEL[r.id]}
               </span>
               <div className="flex items-center gap-2">
+                {r.escalatedCount > 0 && (
+                  <span className="text-[11px] font-semibold text-warn bg-warn/[0.08] px-2 py-0.5 rounded">
+                    {r.escalatedCount} 회피 중
+                  </span>
+                )}
                 {r.dueCount > 0 && (
                   <span className="text-[11px] font-semibold text-accent bg-accent/[0.08] px-2 py-0.5 rounded">
                     {r.dueCount}개 복습

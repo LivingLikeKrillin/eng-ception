@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useLearningStore } from '../../store/learningStore'
 
 const MIN_EMPATHY_MS = 2500
-const MAX_WAIT_MS = 10_000
 
 export default function StepEmpathy() {
   const { payload, payloadStatus, advanceFromEmpathy } = useLearningStore()
@@ -10,7 +9,6 @@ export default function StepEmpathy() {
   useEffect(() => {
     let advanced = false
     let timerDone = false
-    let maxWaitTimer: ReturnType<typeof setTimeout> | null = null
 
     const tryAdvance = () => {
       if (advanced) return
@@ -26,22 +24,16 @@ export default function StepEmpathy() {
       tryAdvance()
     }, MIN_EMPATHY_MS)
 
-    maxWaitTimer = setTimeout(() => {
-      if (!advanced) {
-        useLearningStore.setState({
-          payloadStatus: 'error',
-          error: '응답이 너무 오래 걸려요. 다시 시도해주세요.',
-        })
-      }
-    }, MAX_WAIT_MS)
-
+    // No local hard timeout here: real generation runs ~19s while this old timer
+    // force-errored at 10s, breaking every live session. The actual backstop is
+    // claude.ts FETCH_TIMEOUT_MS (60s) → runFetch sets payloadStatus:'error', which
+    // LearningFlow renders. We only wait here for 'ready'.
     const unsub = useLearningStore.subscribe((state) => {
       if (state.payloadStatus === 'ready') tryAdvance()
     })
 
     return () => {
       clearTimeout(minTimer)
-      if (maxWaitTimer) clearTimeout(maxWaitTimer)
       unsub()
     }
   }, [advanceFromEmpathy])
@@ -56,7 +48,11 @@ export default function StepEmpathy() {
       <p className="sfr text-[26px] font-bold leading-[1.5] tracking-tight">
         {payload?.empathy.message ?? '같이 풀어보자'}
       </p>
-      <p className="fu2 text-[15px] text-t3 mt-4">같이 풀어보자</p>
+      {/* Subtitle only when a real message is shown above — otherwise the message
+          falls back to '같이 풀어보자' and this would duplicate it. */}
+      {payload?.empathy.message && (
+        <p className="fu2 text-[15px] text-t3 mt-4">같이 풀어보자</p>
+      )}
       <div
         className="fu3 mt-6 w-7 h-[3px] rounded-full bg-accent"
         style={{ animation: 'pulse 1.4s ease-in-out infinite' }}

@@ -47,14 +47,6 @@ export default function Home() {
         <img src="/logo.png" alt="Eng-ception" className="w-28 h-28 object-contain -ml-3 -my-6" />
         <div className="flex items-center gap-2">
           <AuthControl />
-          <div className="fi flex items-center gap-1.5 bg-c rounded-full px-3 py-1.5 border border-line/60">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" stroke="var(--color-accent)" strokeWidth="2" />
-              <path d="M12 6v6l4 2" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="text-[13px] font-bold font-en text-accent tabular-nums num-in">4</span>
-            <span className="text-xs text-t2">일째</span>
-          </div>
         </div>
       </div>
 

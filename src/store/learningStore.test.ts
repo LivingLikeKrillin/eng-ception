@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useLearningStore, isAssemblyCorrect, classifyError } from './learningStore'
 import { fetchSessionPayload } from '../services/claude'
 import { setSink } from '../services/analytics'
@@ -543,6 +543,19 @@ async function flushToComplete(store: ReturnType<typeof useLearningStore.getStat
 // ---------------------------------------------------------------------------
 
 describe('complete() applies FSRS schedule', () => {
+  // These tests vi.spyOn(db, ...). Restore after each so the spies don't leak into
+  // any describe appended below (previously "safe only because this block was last").
+  // restoreAllMocks also wipes the hoisted claude vi.fn, so re-apply its impl here.
+  beforeEach(() => {
+    vi.mocked(fetchSessionPayload).mockImplementation(async () => {
+      const { mockSessionPayload } = await import('../services/mocks')
+      return mockSessionPayload('seed')
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('grades the session and calls updatePatternSchedule on the played card', async () => {
     const spy = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
     vi.spyOn(db, 'getPattern').mockResolvedValue(null) // new card path
@@ -650,5 +663,30 @@ describe('complete() applies FSRS schedule', () => {
     // Only 1 call: the played card's schedule. No bypass bump for the played card.
     expect(updateSpy).toHaveBeenCalledTimes(1)
     expect(updateSpy.mock.calls[0][2].bypassedCount).toBe(0)
+  })
+
+  it('is idempotent: no re-save / re-schedule once the session has ended', async () => {
+    const saveSpy = vi.spyOn(db, 'saveLearningRecord').mockResolvedValue(undefined)
+    const updateSpy = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
+    vi.spyOn(db, 'getPattern').mockResolvedValue(null)
+    vi.spyOn(db, 'getPatterns').mockResolvedValue([])
+
+    useLearningStore.getState().startScenario(sampleScenario)
+    await vi.waitFor(() => expect(useLearningStore.getState().payloadStatus).toBe('ready'))
+    // simulate the completion already having been claimed (double-tap of 다음 문장으로)
+    useLearningStore.setState({ currentStep: 'step4', sessionEnded: true })
+
+    await useLearningStore.getState().complete()
+
+    expect(saveSpy).not.toHaveBeenCalled()
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('with no payload resets the store and writes nothing', async () => {
+    const saveSpy = vi.spyOn(db, 'saveLearningRecord').mockResolvedValue(undefined)
+    useLearningStore.getState().reset()
+    await useLearningStore.getState().complete()
+    expect(saveSpy).not.toHaveBeenCalled()
+    expect(useLearningStore.getState().currentStep).toBe('input')
   })
 })

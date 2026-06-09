@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { localStorageAdapter } from './localStorage'
-import type { Pattern } from '../types'
+import type { LearningRecord, Pattern } from '../types'
 import { newCardDefaults } from '../services/srs'
 
 class MemStorage {
@@ -88,6 +88,38 @@ describe('localStorageAdapter.getPattern / updatePatternSchedule', () => {
     expect(p?.stability).toBe(4.2)
     expect(p?.cardState).toBe('review')
     expect(p?.reps).toBe(1)
+  })
+})
+
+describe('localStorageAdapter resilience', () => {
+  it('returns [] and drops the key on corrupt JSON (no boot crash)', async () => {
+    localStorage.setItem('eng-ception:patterns', '{not valid json')
+    expect(await localStorageAdapter.getPatterns()).toEqual([])
+    expect(localStorage.getItem('eng-ception:patterns')).toBeNull() // dropped
+  })
+
+  it('saveLearningRecord degrades (does not throw) when storage is full', async () => {
+    const throwing = new MemStorage()
+    throwing.setItem = () => { throw new DOMException('quota', 'QuotaExceededError') }
+    globalThis.localStorage = throwing
+    const rec = { id: 'r1', schemaVersion: 5, originalKorean: 'x' } as unknown as LearningRecord
+    await expect(localStorageAdapter.saveLearningRecord(rec)).resolves.toBeUndefined()
+  })
+
+  it('getPatterns backfills FSRS defaults on read even without an init() migration', async () => {
+    // a pre-v5 pattern written straight to storage (no FSRS fields)
+    localStorage.setItem('eng-ception:patterns', JSON.stringify([{
+      id: 'p1', template: 'I made him ~', patternId: 'causative-bare', triggerVerb: 'make',
+      category: '감정/관계', tags: [], exampleOriginal: 'x', exampleEnglish: 'y',
+      savedAt: '2026-01-01T00:00:00Z', reviewCount: 0, lastReviewedAt: null,
+    }]))
+    const [p] = await localStorageAdapter.getPatterns()
+    expect(p.bypassedCount).toBe(0)
+    expect(p.cardState).toBe('new')
+    expect(p.reps).toBe(0)
+    expect(p.nextDueAt).toBeNull()
+    const single = await localStorageAdapter.getPattern('causative-bare', 'make')
+    expect(single?.bypassedCount).toBe(0)
   })
 })
 
