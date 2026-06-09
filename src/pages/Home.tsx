@@ -64,8 +64,8 @@ export default function Home() {
   const handleSaveLater = async () => {
     const korean = quickInput.trim()
     if (!korean) return
+    setQuickInput('') // clear synchronously so a fast double-tap can't capture the same text twice
     await db.saveCapture({ id: crypto.randomUUID(), korean, createdAt: new Date().toISOString(), source: 'manual' })
-    setQuickInput('')
     await refreshCaptures()
   }
   const drillCapture = async (c: Capture) => {
