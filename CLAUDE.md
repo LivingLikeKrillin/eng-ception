@@ -24,7 +24,8 @@ v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학�
 - **상태 관리:** Zustand 5
 - **라우팅:** React Router 7
 - **AI:** Claude API (Anthropic) — Vercel Edge Function 또는 dev-server.js 프록시 (모델: `claude-sonnet-4-6`)
-- **저장소:** LocalStorage (현재, schema v4) → Firebase 마이그레이션 예정
+- **저장소:** LocalStorage (현재, schema v5) → Firebase 마이그레이션 예정
+- **SRS:** ts-fsrs 5.4.1 (간격 반복 스케줄러)
 - **테스트:** Vitest (단위/통합) + Playwright (e2e)
 - **배포:** Vercel (api/ 폴더 Edge Functions) + PWA (vite-plugin-pwa)
 - **개발 체제:** 1인 풀스택 (Windows)
@@ -42,11 +43,12 @@ eng-ception/
 │   ├── App.tsx                   # 라우터 설정
 │   ├── index.css                 # Tailwind 임포트
 │   ├── types/
-│   │   ├── index.ts              # Scenario, LearningRecord(v4), Pattern
+│   │   ├── index.ts              # Scenario, LearningRecord(v4|v5), Pattern(+FSRS 필드)
 │   │   ├── v9.ts                 # V9Step, Pattern5HId, CURATED_VERBS(17), SessionPayload 등 v9 핵심 타입
 │   │   └── events.ts             # AnalyticsEvent 엔벨로프 + EventName union (이벤트 트래킹)
 │   ├── data/
-│   │   └── seed-scenarios.ts     # 시드 시나리오 15개 (s1~s15; s11~s15는 저빈도 5형식 커버)
+│   │   ├── seed-scenarios.ts     # 시드 시나리오 15개 (s1~s15; s11~s15는 저빈도 5형식 커버)
+│   │   └── patternLabels.ts      # PATTERN_LABEL — Pattern5HId → 한국어 표시명 맵
 │   ├── services/
 │   │   ├── claude.ts             # fetchSessionPayload — 세션당 단 1회 API 호출 (+ mock/timeout/retry)
 │   │   ├── prompts.ts            # SYSTEM_PROMPT(5형식 코치) + buildUserMessage
@@ -56,23 +58,25 @@ eng-ception/
 │   │   ├── analyticsLifecycle.ts # visibilitychange → session_abandon(hidden)
 │   │   ├── firebase.ts           # Firebase 단일 init + isFirebaseConfigured() 게이트 + 에뮬레이터 연결
 │   │   ├── migrateToCloud.ts     # 로그인 시 로컬→Firestore 비파괴 union 병합 + 조건부 로컬 클리어
+│   │   ├── srs.ts                # 순수 FSRS 스케줄러 (ts-fsrs 래핑) — schedule(), gradeFromSignals(), newCardDefaults()
+│   │   ├── srsView.ts            # Pattern[] 위 순수 파생 — isDue, dueQueue, masteryLabel, rollupByPattern
 │   │   └── pwa/
 │   │       └── installPrompt.ts  # beforeinstallprompt 캡처 + 설치 상태/iOS Safari 감지 + dismiss 영속화
 │   ├── store/
-│   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화)
+│   │   ├── dataStore.ts          # DataStore 인터페이스 (영속화 추상화; +getPattern/updatePatternSchedule)
 │   │   ├── db.ts                 # 스왑 가능한 db 파사드 + setDbAdapter (setSink 평행; 7 소비자가 import)
-│   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v4, patternId+triggerVerb dedup)
-│   │   ├── firestoreDataStore.ts # createFirestoreDataStore(fs,uid) — Firestore 어댑터 (offline-safe dedup)
+│   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v5; v4→v5 비파괴 마이그레이션)
+│   │   ├── firestoreDataStore.ts # createFirestoreDataStore(fs,uid) — Firestore 어댑터 (withDefaults FSRS 백필)
 │   │   ├── analyticsSink.ts      # AnalyticsSink 인터페이스 + noop + MemoryAnalyticsSink
 │   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (eng-ception:events)
 │   │   ├── firestoreAnalyticsSink.ts # createFirestoreAnalyticsSink(fs,uid) — Firestore 텔레메트리 sink
 │   │   ├── auth.ts               # 구글 로그인 + 어댑터/sink 스왑 reaction의 단일 소유자
-│   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect + 이벤트 계측
+│   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect + 이벤트 계측 + complete() SRS 스케줄링
 │   ├── pages/
-│   │   ├── Home.tsx              # 홈 (빠른 입력 + 시나리오 + 최근 학습)
+│   │   ├── Home.tsx              # 홈 (빠른 입력 + 시나리오 + 최근 학습 + SRS due-count 넛지)
 │   │   ├── Learn.tsx             # 학습 페이지 (LearningFlow 호스트)
 │   │   ├── Patterns.tsx          # 패턴 라이브러리 (5형식 primary 내비)
-│   │   └── Review.tsx            # 복습 (학습 기록 + 저장 패턴)
+│   │   └── Review.tsx            # 복습 (학습 기록 + 저장 패턴 + SRS 오늘 복습 큐 + 회로 진단)
 │   └── components/
 │       ├── common/
 │       │   ├── Navigation.tsx    # 하단 탭 네비게이션
@@ -82,6 +86,8 @@ eng-ception/
 │       ├── home/
 │       │   ├── ScenarioCard.tsx
 │       │   └── RecentLearning.tsx
+│       ├── review/
+│       │   └── CircuitDiagnostic.tsx # 2-레이어 회로 진단 — Pattern5HId 롤업 + 카드별 숙련도
 │       └── learning/
 │           ├── LearningFlow.tsx      # 학습 플로우 컨트롤러 (currentStep → 스텝 컴포넌트 라우팅)
 │           ├── StepEmpathy.tsx       # 공감 (echo + message)
@@ -160,8 +166,8 @@ step4    : 완료
 
 ### `types/index.ts`
 - **Scenario:** 시드 시나리오 (situation, originalKorean, purpose, emotionalTone, difficulty, category, tags?, isDaily, createdAt)
-- **LearningRecord (schema v4):** 세션 전체 기록. 5형식 필드 — `pattern5hId`, `triggerVerb`; 시그널 — `patternQuizCorrect`, `patternQuizUnsure`(힌트 사용; correct=true와 공존 가능), `assemblyCorrect`; 선택 — `precheckChoice`, `afterChoice`; 결과 — `finalSentence`, `structureTypeId/Label`
-- **Pattern:** 재사용 가능한 발화 패턴. `template`(verb-specific "I made him ~"), `patternId`(Pattern5HId), `triggerVerb`(dedup 키), `category`, `tags`, `exampleOriginal/English`, `reviewCount`, `lastReviewedAt`
+- **LearningRecord (schema v4|v5):** 세션 전체 기록. `schemaVersion: 4 | 5`(신규 기록은 5로 씀). 5형식 필드 — `pattern5hId`, `triggerVerb`; 시그널 — `patternQuizCorrect`, `patternQuizUnsure`(힌트 사용; correct=true와 공존 가능), `assemblyCorrect`; 선택 — `precheckChoice`, `afterChoice`; 결과 — `finalSentence`, `structureTypeId/Label`
+- **Pattern:** 재사용 가능한 발화 패턴. `template`(verb-specific "I made him ~"), `patternId`(Pattern5HId), `triggerVerb`(dedup 키), `category`, `tags`, `exampleOriginal/English`, `reviewCount`, `lastReviewedAt` + **FSRS 스케줄 필드(schema v5):** `stability`(일 단위, null=미스케줄), `difficulty`(1..10), `nextDueAt`(ISO, null→즉시 due), `reps`, `lapses`, `bypassedCount`(회피 카운터), `cardState`('new'|'learning'|'review'|'relearning'), `lastGrade`(1..4|null)
 
 ### `types/v9.ts`
 - **V9Step:** `'input'|'empathy'|'precheck'|'step0'|'step1'|'step2'|'step3'|'step4'`
@@ -181,21 +187,49 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 - `tapConnector(id)`, `advanceToStep2()` → step2
 - `advanceToStep3()` *(async)* → **패턴 저장**(dedup) 후 step3
 - `submitAfterChoice(id)`, `advanceToStep4()` → step4
-- `complete()` *(async)* → **LearningRecord(v4) 저장** 후 세션 초기화
+- `complete()` *(async)* → `gradeFromSignals` → `schedule()` → FSRS 상태 저장 + `bypassedCount` 리셋(완료 카드) / 다른 due 카드 `bypassedCount++`(N=3 에스컬레이션) → **LearningRecord(v5) 저장** 후 세션 초기화
 - `isAssemblyCorrect(state)` — 블록 순서 + connector 정답 판정 (export 헬퍼)
 
 **currentStep 전환 방식:** API 응답 후 자동 전환하지 않고, 사용자가 화면을 확인한 뒤 다음 버튼을 누르면 스텝 컴포넌트가 위 advance 액션을 호출한다.
 
-## 저장소 (`store/localStorage.ts`, schema v4)
+## 저장소 (`store/localStorage.ts`, schema v5)
 
-- `DataStore` 인터페이스(`dataStore.ts`)로 영속화 추상화 → Firestore 어댑터가 `localStorage.ts` 옆에 슬롯인 가능
-- `init()`: 저장된 schema 버전 ≠ 4 이면 records/patterns 폐기 후 v4로 마이그레이션 (앱 시작 시 `main.tsx`에서 호출)
-- **패턴 dedup: `patternId + triggerVerb` 복합키.** 같은 키 재저장 시 새로 안 만들고 `reviewCount++` + `lastReviewedAt` 갱신 → 향후 SRS 하위 레이어 키
+- `DataStore` 인터페이스(`dataStore.ts`)로 영속화 추상화 → Firestore 어댑터가 `localStorage.ts` 옆에 슬롯인 가능. SRS 추가로 `getPattern(patternId, triggerVerb)` + `updatePatternSchedule(patternId, triggerVerb, partial)` 2개 신규 메서드.
+- `init()`: `CURRENT_SCHEMA_VERSION = 5`. 저장된 버전 < 5 이면 **v4→v5 비파괴 마이그레이션** — 기존 records/patterns 유지, 패턴에 FSRS 디폴트(`newCardDefaults()`) 백필. 버전 불일치 파괴(기존 v4 동작)와 달리 데이터 손실 없음.
+- **패턴 dedup: `patternId + triggerVerb` 복합키.** 같은 키 재저장 시 `reviewCount++` + `lastReviewedAt` 갱신 — SRS 하위 레이어 키로 사용됨.
 - `MAX_RECORDS = 100` (초과 시 오래된 기록부터 제거)
 
 ## 이벤트 트래킹 (event tracking)
 
 세션의 **행동·시간 레이어**를 포착 — `LearningRecord`(완료 시에만 저장)가 못 보는 이탈 세션/단계별 시간/fetch 지연. `services/analytics.ts`의 `track(name, props, sessionId)` 파사드가 content-free `AnalyticsEvent`를 swappable `AnalyticsSink`로 보냄. 기본 sink는 noop; `main.tsx`가 `localAnalyticsSink`(localStorage 링버퍼, `eng-ception:events`, 자체 version key, MAX 1000 회전)를 주입 (`VITE_DISABLE_ANALYTICS=true`면 비활성, noop 유지). 계측은 `learningStore`에 집중 — `transitionTo`(단계별 dwell), 타임드 `runFetch`(fetch_start/success/error + `classifyError` kind), `complete`(session_complete), 공개 `abandonIfActive(reason)`(reset/restart + `visibilitychange` 리스너로 탭 종료 drop-off; `sessionEnded` 가드로 중복 방지). 7종 이벤트: `session_start`/`session_complete`/`session_abandon`/`step_dwell`/`fetch_start`/`fetch_success`/`fetch_error`. 이벤트는 PIPA-safe (raw 한국어/영어 없음 — id/pattern/bool/타이밍만). dev에서 `window.__engEvents()`(=globalThis)로 확인. Firebase/PostHog sink는 동일 `AnalyticsSink` 인터페이스로 나중 슬롯인 (DataStore 평행). 설계: `docs/superpowers/specs/2026-06-07-event-tracking-design.md`.
+
+## SRS (간격 반복)
+
+**2-레이어 구조.** 상위 = `Pattern5HId` 롤업(7패턴 숙련도 집계), 하위 = `(patternId, triggerVerb)` 개별 FSRS 카드.
+
+### 스케줄러 (`services/srs.ts`)
+`ts-fsrs@5.4.1` 래핑 — DSR 모델, 기본 가중치. 주요 상수: `REQUEST_RETENTION=0.9`, `N_BYPASS=3`, `INTRO_PHASE=false`(0.25일 초기 인터벌 시드 — 미래 A/B 암, 현재 비활성). `enable_short_term=false`(세션 빈도가 낮아 분 단위 학습 스텝 불필요, New → Review 직행).
+
+- `schedule(prev, grade, now)` — 이전 `CardSchedule | null` + grade(1..4) → `NextSchedule`
+- `gradeFromSignals({ assemblyCorrect, patternQuizCorrect, patternQuizUnsure })` → grade(1..4) 4-way 테이블: 조립OK+퀴즈cold=4, 조립OK+힌트=3, 조립OK+퀴즈틀림=2, 조립실패+인식OK=2, 전체실패=1
+- `newCardDefaults()` → FSRS 초기값 (`stability/difficulty/nextDueAt=null`, reps/lapses/bypassedCount=0, cardState='new')
+
+### 뷰 파생 (`services/srsView.ts`)
+`Pattern[]` 위 순수 함수. `isDue(card, now)`, `dueQueue(cards, now)`(에스컬레이션→초과기일→savedAt 정렬), `masteryLabel(card)` → '새내기'/'학습중'/'숙련'(stability ≥21일 cutoff; 데이터 기반 튜닝 보류), `rollupByPattern(cards, now)` → `PatternRollup[]`(id/cards/dueCount/escalatedCount).
+
+### complete() 스케줄링 (`store/learningStore.ts`)
+세션 완료 시: `gradeFromSignals` → 듀얼 시그널로 grade 산출 → `getPattern`으로 현재 카드 로드 → `schedule()` → `updatePatternSchedule`로 FSRS 상태 저장 + 완료 카드 `bypassedCount` 리셋. **N=3 에스컬레이션(단일 모드 soft-bias):** 다른 모든 due 카드 `bypassedCount++`(3 이상이면 dueQueue 우선순위 상위 부상).
+
+### UI
+- **복습 페이지(`pages/Review.tsx`):** "오늘 복습" 섹션 — `dueQueue`로 due 카드 나열, 탭 시 해당 카드의 `exampleOriginal`을 `input` router-state로 시드해 기존 학습 플로우 재실행(re-practice). "회로 진단" — `CircuitDiagnostic.tsx`가 `rollupByPattern`으로 2-레이어 뷰 표시(Pattern5HId별 카드 수/due수/숙련도).
+- **홈(`pages/Home.tsx`):** due 카드 ≥1개이면 "복습할 회로 N개 →" 넛지 표시.
+- **organic-first:** 하드 큐 없음, 프롬프트 바이어스 없음. 재실습 유도만.
+
+### 데이터 충돌 (클라우드 로그인 병합)
+로그인 merge 시 FSRS 필드 충돌 = **클라우드 우선(cloud-authoritative)**. 코드 변경 없음 — 기존 `migrateToCloud.ts`의 union 병합 동작 그대로(문서화만).
+
+### 연기 항목 (데이터 게이팅)
+Time-to-Stabilization A/B, dynamic N, 사용자별 가중치 최적화, intro-phase 활성화, mastery-band 튜닝. 설계: `docs/superpowers/specs/2026-06-09-srs-design.md`.
 
 ## Firebase (cloud tier) — 선택적 클라우드 동기화
 
@@ -235,15 +269,15 @@ npm run dev:api    # API 프록시 서버 (Express, port 3001, --env-file=.env.l
 npm run build      # 프로덕션 빌드 (tsc -b && vite build)
 npm run lint       # ESLint 실행
 npm run preview    # 빌드 결과 미리보기
-npm run test       # Vitest 단위/통합 (= vitest run, 95 pass | 9 skip)
+npm run test       # Vitest 단위/통합 (= vitest run, 118 pass | 10 skip)
 npm run test:watch # Vitest watch
 npm run test:e2e   # Playwright e2e (mock 모드, vite strict port 5219)
-npm run test:emulator # Firestore 어댑터 + 룰 + 로그인 데이터흐름 (Java 필요; firebase emulators:exec 자동 기동, 9 tests)
+npm run test:emulator # Firestore 어댑터 + 룰 + 로그인 데이터흐름 (Java 필요; firebase emulators:exec 자동 기동, 10 tests)
 ```
 
 **개발 시:** mock 모드(`VITE_USE_MOCK=true`)면 `npm run dev`만으로 충분. 실 Claude API를 쓰려면 `VITE_USE_MOCK=false` + `npm run dev:api` 동시 실행.
 
-**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (95 pass | 9 skip) · `npm run lint` · `npm run build` (PWA 아티팩트 — manifest+SW+precache 생성 확인) · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 9 — 기본 카운트엔 미포함).
+**검증 레시피:** `npx tsc -b` (NOT `--noEmit` — 루트 tsconfig가 `files:[]`+references라 no-op) · `npx vitest run` (118 pass | 10 skip) · `npm run lint` · `npm run build` (PWA 아티팩트 — manifest+SW+precache 생성 확인) · `npm run test:e2e` · `npm run test:emulator` (Java 필요, 에뮬레이터 게이트 10 — 기본 카운트엔 미포함).
 
 ## 환경 변수
 
@@ -263,4 +297,4 @@ VITE_USE_FIREBASE_EMULATOR= # 'true' 면 로컬 에뮬레이터(Auth 9099/Firest
 1. **Firebase 마이그레이션:** ✅ v1 구현됨 (branch `feat/firebase-migration` — local-first + 선택적 구글 로그인, Firestore 어댑터/sink 슬롯인, 비파괴 병합, 에뮬레이터 테스트). 위 "Firebase (cloud tier)" 섹션 참조. **남은 것:** 프로덕션 프로비저닝(체크리스트 spec §10) + **phase 2 = 카카오 로그인(custom-token Cloud Function + Blaze)**.
 2. **PWA 최적화:** 오프라인 캐싱 + 홈 화면 설치 유도. `vite-plugin-pwa` 이미 연결됨
 3. **이벤트 트래킹:** 세션 시작/완료, 단계별 소요 시간, 이탈 단계
-4. **post-v9 SRS (2-Layer):** 상위 = `Pattern5HId` 롤업, 하위(FSRS core) = `(patternId, triggerVerb)`. dedup 키 이미 존재 → schema v5 마이그레이션으로 FSRS 필드(interval/easeFactor/nextDueAt/bypassedCount) 추가. organic-first + 회피 임계값 N=3 + soft-bias 큐. (설계 선행 필요)
+4. **post-v9 SRS (2-Layer):** ✅ v1 구현됨 (branch `feat/srs` — ts-fsrs 스케줄러, schema v5 비파괴 마이그레이션, dueQueue+회로 진단 UI, 에뮬레이터 포함). 위 "SRS (간격 반복)" 섹션 참조. **남은 것(데이터 게이팅):** Time-to-Stabilization A/B · dynamic N · 사용자별 가중치 최적화 · intro-phase 활성화 · mastery-band 튜닝. 설계: `docs/superpowers/specs/2026-06-09-srs-design.md`.
