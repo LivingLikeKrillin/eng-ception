@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
+import { dueQueue } from '../services/srsView'
 import { seedScenarios } from '../data/seed-scenarios'
 import type { Scenario } from '../types'
 import ScenarioCard from '../components/home/ScenarioCard'
@@ -12,6 +13,7 @@ export default function Home() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [quickInput, setQuickInput] = useState('')
   const [hasCompletedSession, setHasCompletedSession] = useState(false)
+  const [dueCount, setDueCount] = useState(0)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -24,6 +26,8 @@ export default function Home() {
       setScenarios(unlearned)
       const records = await db.getLearningRecords()
       setHasCompletedSession(records.length > 0)
+      const patterns = await db.getPatterns()
+      setDueCount(dueQueue(patterns, new Date()).length)
     }
     load()
   }, [])
@@ -100,6 +104,16 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* SRS nudge — due count */}
+        {dueCount > 0 && (
+          <button
+            onClick={() => navigate('/review')}
+            className="fu2 mt-6 text-left text-sm text-accent font-semibold"
+          >
+            복습할 회로 {dueCount}개 →
+          </button>
+        )}
 
         {/* Try these — scenarios */}
         {scenarios.length > 0 && (
