@@ -2,13 +2,21 @@ import type { SessionPayload } from '../types/v9'
 import { SYSTEM_PROMPT, buildUserMessage } from './prompts'
 import { assertSessionPayload } from './validate'
 import { mockSessionPayload } from './mocks'
+import { CONTENT_PACK } from '../data/contentPack'
 
 const API_URL = '/api/chat'
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const MAX_RETRIES = 1
 const FETCH_TIMEOUT_MS = 60_000
 
-export async function fetchSessionPayload(korean: string): Promise<SessionPayload> {
+export async function fetchSessionPayload(korean: string, scenarioId?: string): Promise<SessionPayload> {
+  // Cold-start content pack: a curated seed loads instantly — no API, offline, free.
+  // Priority pack > mock > live. Custom user input has no scenarioId → live (or mock).
+  if (scenarioId && CONTENT_PACK[scenarioId]) {
+    const payload = CONTENT_PACK[scenarioId]
+    assertSessionPayload(payload) // defensive (contentPack.test guarantees validity)
+    return payload
+  }
   if (USE_MOCK) return mockSessionPayload(korean)
 
   let lastError: Error | null = null
