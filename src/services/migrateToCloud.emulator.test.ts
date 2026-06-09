@@ -9,6 +9,7 @@ import { createFirestoreDataStore } from '../store/firestoreDataStore'
 import { migrateToCloud } from './migrateToCloud'
 import type { DataStore } from '../store/dataStore'
 import type { LearningRecord, Pattern } from '../types'
+import { newCardDefaults } from './srs'
 
 // Login data-flow smoke against the REAL Firestore emulator: the same path the manual
 // Task 5.3 smoke checks (Firestore populated / local cleared / cross-device read / union
@@ -37,6 +38,8 @@ function memStore(records: LearningRecord[] = [], patterns: Pattern[] = []): Dat
     },
     async getPatterns() { return p },
     async deletePattern(id) { p = p.filter((x) => x.id !== id) },
+    async getPattern() { return null },
+    async updatePatternSchedule() {},
   }
 }
 const rec = (id: string): LearningRecord => ({
@@ -49,6 +52,7 @@ const pat = (id: string, verb: string): Pattern => ({
   id, template: 't', patternId: 'causative-bare', triggerVerb: verb, category: 'c',
   tags: [], exampleOriginal: 'x', exampleEnglish: 'y', savedAt: '2026-01-01T00:00:00Z',
   reviewCount: 0, lastReviewedAt: null,
+  ...newCardDefaults(),
 })
 
 describe.skipIf(!RUN)('login data-flow (emulator): migrateToCloud + Firestore adapter', () => {

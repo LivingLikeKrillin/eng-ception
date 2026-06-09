@@ -11,6 +11,9 @@ import {
 import type { DataStore } from './dataStore'
 import type { LearningRecord, Pattern } from '../types'
 import { seedScenarios } from '../data/seed-scenarios'
+import { newCardDefaults } from '../services/srs'
+
+const withDefaults = (p: Pattern): Pattern => ({ ...newCardDefaults(), ...p })
 
 const patternKey = (patternId: string, triggerVerb: string) => `${patternId}__${triggerVerb}`
 
@@ -69,7 +72,7 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
     },
     async getPatterns() {
       const snap = await getDocs(patternsCol())
-      return snap.docs.map((d) => d.data() as Pattern)
+      return snap.docs.map((d) => withDefaults(d.data() as Pattern))
     },
     async deletePattern(id) {
       // interface deletes by Pattern.id (a uuid), not the composite doc key, so scan +
@@ -77,6 +80,17 @@ export function createFirestoreDataStore(fs: Firestore, uid: string): DataStore 
       const snap = await getDocs(patternsCol())
       const match = snap.docs.find((d) => (d.data() as Pattern).id === id)
       if (match) await deleteDoc(match.ref)
+    },
+
+    async getPattern(patternId, triggerVerb) {
+      const ref = doc(patternsCol(), patternKey(patternId, triggerVerb))
+      const snap = await getDoc(ref) // served from cache when offline
+      return snap.exists() ? withDefaults(snap.data() as Pattern) : null
+    },
+
+    async updatePatternSchedule(patternId, triggerVerb, partial) {
+      const ref = doc(patternsCol(), patternKey(patternId, triggerVerb))
+      await setDoc(ref, partial, { merge: true }) // queues offline like the increment path
     },
   }
 

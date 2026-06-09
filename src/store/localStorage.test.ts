@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { localStorageAdapter } from './localStorage'
 import type { Pattern } from '../types'
+import { newCardDefaults } from '../services/srs'
 
 class MemStorage {
   private m = new Map<string, string>()
@@ -17,54 +18,80 @@ beforeEach(() => {
   // Node 22 provides a read-only global crypto with randomUUID — no shim needed.
 })
 
-describe('localStorageAdapter.init', () => {
-  it('sets schema version to 4 when none exists', async () => {
+function makePattern(overrides: Partial<Pattern> = {}): Pattern {
+  return {
+    id: `id-${Math.random()}`,
+    template: 'I made him ~',
+    patternId: 'causative-bare',
+    triggerVerb: 'make',
+    category: '감정/관계',
+    tags: ['감정 표현'],
+    exampleOriginal: '그가 화내게 만들었어',
+    exampleEnglish: 'I made him angry.',
+    savedAt: new Date().toISOString(),
+    reviewCount: 0,
+    lastReviewedAt: null,
+    ...newCardDefaults(),
+    ...overrides,
+  }
+}
+
+describe('localStorageAdapter v5 migration (non-destructive)', () => {
+  it('sets schema version to 5 when none exists', async () => {
     await localStorageAdapter.init()
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('4')
+    expect(localStorage.getItem('eng-ception:schema-version')).toBe('5')
   })
 
-  it('clears records and patterns when schema version is old', async () => {
-    localStorage.setItem('eng-ception:schema-version', '3')
-    localStorage.setItem('eng-ception:records', '[{"id":"old"}]')
-    localStorage.setItem('eng-ception:patterns', '[{"id":"old-pat"}]')
-    localStorage.setItem('eng-ception:scenarios', '[{"id":"s1"}]')
-
-    await localStorageAdapter.init()
-
-    expect(localStorage.getItem('eng-ception:records')).toBeNull()
-    expect(localStorage.getItem('eng-ception:patterns')).toBeNull()
-    expect(localStorage.getItem('eng-ception:scenarios')).toBe('[{"id":"s1"}]')
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('4')
-  })
-
-  it('is a no-op when schema version is already 4', async () => {
+  it('backfills FSRS defaults onto existing patterns and KEEPS records on v4->v5', async () => {
     localStorage.setItem('eng-ception:schema-version', '4')
-    localStorage.setItem('eng-ception:records', '[{"id":"keep"}]')
+    localStorage.setItem('eng-ception:records', '[{"id":"r1"}]')
+    localStorage.setItem('eng-ception:patterns', JSON.stringify([{
+      id: 'p1', template: 'I made him ~', patternId: 'causative-bare', triggerVerb: 'make',
+      category: '감정/관계', tags: [], exampleOriginal: 'x', exampleEnglish: 'y',
+      savedAt: '2026-01-01T00:00:00Z', reviewCount: 2, lastReviewedAt: null,
+    }]))
 
     await localStorageAdapter.init()
 
-    expect(localStorage.getItem('eng-ception:records')).toBe('[{"id":"keep"}]')
+    expect(localStorage.getItem('eng-ception:records')).toBe('[{"id":"r1"}]') // kept
+    const patterns = await localStorageAdapter.getPatterns()
+    expect(patterns[0].cardState).toBe('new')
+    expect(patterns[0].bypassedCount).toBe(0)
+    expect(patterns[0].nextDueAt).toBeNull()
+    expect(patterns[0].reviewCount).toBe(2) // preserved
+    expect(localStorage.getItem('eng-ception:schema-version')).toBe('5')
+  })
+
+  it('still clears on a pre-v4 (legacy) version', async () => {
+    localStorage.setItem('eng-ception:schema-version', '3')
+    localStorage.setItem('eng-ception:patterns', '[{"id":"old"}]')
+    await localStorageAdapter.init()
+    expect(await localStorageAdapter.getPatterns()).toEqual([])
+  })
+})
+
+describe('localStorageAdapter.getPattern / updatePatternSchedule', () => {
+  it('getPattern finds by composite key, returns null when absent', async () => {
+    await localStorageAdapter.init()
+    await localStorageAdapter.savePattern(makePattern({ id: 'p1' }))
+    expect((await localStorageAdapter.getPattern('causative-bare', 'make'))?.id).toBe('p1')
+    expect(await localStorageAdapter.getPattern('causative-bare', 'let')).toBeNull()
+  })
+
+  it('updatePatternSchedule merges FSRS fields onto the matching card', async () => {
+    await localStorageAdapter.init()
+    await localStorageAdapter.savePattern(makePattern({ id: 'p1' }))
+    await localStorageAdapter.updatePatternSchedule('causative-bare', 'make', {
+      stability: 4.2, nextDueAt: '2026-06-20T00:00:00Z', reps: 1, cardState: 'review',
+    })
+    const p = await localStorageAdapter.getPattern('causative-bare', 'make')
+    expect(p?.stability).toBe(4.2)
+    expect(p?.cardState).toBe('review')
+    expect(p?.reps).toBe(1)
   })
 })
 
 describe('localStorageAdapter.savePattern dedup', () => {
-  function makePattern(overrides: Partial<Pattern> = {}): Pattern {
-    return {
-      id: `id-${Math.random()}`,
-      template: 'I made him ~',
-      patternId: 'causative-bare',
-      triggerVerb: 'make',
-      category: '감정/관계',
-      tags: ['감정 표현'],
-      exampleOriginal: '그가 화내게 만들었어',
-      exampleEnglish: 'I made him angry.',
-      savedAt: new Date().toISOString(),
-      reviewCount: 0,
-      lastReviewedAt: null,
-      ...overrides,
-    }
-  }
-
   it('adds a new pattern when no match exists', async () => {
     await localStorageAdapter.init()
     await localStorageAdapter.savePattern(makePattern())

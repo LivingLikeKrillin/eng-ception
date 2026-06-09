@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { migrateToCloud } from './migrateToCloud'
 import type { DataStore } from '../store/dataStore'
 import type { LearningRecord, Pattern } from '../types'
+import { newCardDefaults } from './srs'
 
 function memStore(seedRecords: LearningRecord[] = [], seedPatterns: Pattern[] = []): DataStore {
   let records = [...seedRecords]
@@ -23,6 +24,8 @@ function memStore(seedRecords: LearningRecord[] = [], seedPatterns: Pattern[] = 
     },
     async getPatterns() { return patterns },
     async deletePattern(id) { patterns = patterns.filter((p) => p.id !== id) },
+    async getPattern() { return null },
+    async updatePatternSchedule() {},
   }
 }
 const rec = (id: string): LearningRecord => ({
@@ -35,6 +38,7 @@ const pat = (id: string, verb: string): Pattern => ({
   id, template: 't', patternId: 'causative-bare', triggerVerb: verb, category: 'c',
   tags: [], exampleOriginal: 'x', exampleEnglish: 'y', savedAt: '2026-01-01T00:00:00Z',
   reviewCount: 0, lastReviewedAt: null,
+  ...newCardDefaults(),
 })
 
 describe('migrateToCloud', () => {

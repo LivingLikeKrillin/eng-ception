@@ -1,8 +1,12 @@
 import type { DataStore } from './dataStore'
 import type { Scenario, LearningRecord, Pattern } from '../types'
+import { newCardDefaults } from '../services/srs'
 
 const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
-const CURRENT_SCHEMA_VERSION = 4
+const CURRENT_SCHEMA_VERSION = 5
+
+// p already has its own values; spread defaults FIRST so p wins, filling only missing FSRS fields.
+const withSrsDefaults = (p: Pattern): Pattern => ({ ...newCardDefaults(), ...p })
 
 const KEYS = {
   scenarios: 'eng-ception:scenarios',
@@ -24,11 +28,19 @@ function setItem<T>(key: string, data: T[]): void {
 export const localStorageAdapter: DataStore = {
   async init() {
     const stored = localStorage.getItem(SCHEMA_VERSION_KEY)
-    if (stored !== String(CURRENT_SCHEMA_VERSION)) {
-      localStorage.removeItem('eng-ception:records')
-      localStorage.removeItem('eng-ception:patterns')
+    if (stored === String(CURRENT_SCHEMA_VERSION)) return
+
+    if (stored === '4') {
+      // Non-destructive v4 -> v5: backfill FSRS defaults onto existing patterns, keep records.
+      setItem(KEYS.patterns, getItem<Pattern>(KEYS.patterns).map(withSrsDefaults))
       localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
+      return
     }
+
+    // Legacy (<=3) or unknown: clear records + patterns, set current version.
+    localStorage.removeItem('eng-ception:records')
+    localStorage.removeItem('eng-ception:patterns')
+    localStorage.setItem(SCHEMA_VERSION_KEY, String(CURRENT_SCHEMA_VERSION))
   },
 
   async getScenarios() {
@@ -94,5 +106,18 @@ export const localStorageAdapter: DataStore = {
   async deletePattern(id) {
     const patterns = getItem<Pattern>(KEYS.patterns)
     setItem(KEYS.patterns, patterns.filter((p) => p.id !== id))
+  },
+
+  async getPattern(patternId, triggerVerb) {
+    const patterns = getItem<Pattern>(KEYS.patterns)
+    return patterns.find((p) => p.patternId === patternId && p.triggerVerb === triggerVerb) ?? null
+  },
+
+  async updatePatternSchedule(patternId, triggerVerb, partial) {
+    const patterns = getItem<Pattern>(KEYS.patterns)
+    const card = patterns.find((p) => p.patternId === patternId && p.triggerVerb === triggerVerb)
+    if (!card) return
+    Object.assign(card, partial)
+    setItem(KEYS.patterns, patterns)
   },
 }

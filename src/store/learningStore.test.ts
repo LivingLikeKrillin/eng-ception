@@ -4,6 +4,7 @@ import { fetchSessionPayload } from '../services/claude'
 import { setSink } from '../services/analytics'
 import { MemoryAnalyticsSink } from './analyticsSink'
 import type { Scenario } from '../types'
+import { db } from './db'
 
 vi.mock('../services/claude', () => ({
   fetchSessionPayload: vi.fn(async () => {
@@ -25,6 +26,8 @@ vi.mock('./localStorage', () => ({
     async getUnlearnedScenarios() { return [] },
     async deletePattern() {},
     async deleteLearningRecord() {},
+    async getPattern() { return null },
+    async updatePatternSchedule() {},
   },
 }))
 
@@ -176,7 +179,7 @@ describe('learningStore pattern save idempotency', () => {
 })
 
 describe('learningStore complete()', () => {
-  it('persists a v4 LearningRecord with pattern5hId and patternQuizCorrect', async () => {
+  it('persists a v5 LearningRecord with pattern5hId and patternQuizCorrect', async () => {
     const localStorage = await import('./localStorage')
     const saveSpy = vi.spyOn(localStorage.localStorageAdapter, 'saveLearningRecord')
 
@@ -191,7 +194,7 @@ describe('learningStore complete()', () => {
 
     expect(saveSpy).toHaveBeenCalledTimes(1)
     const record = saveSpy.mock.calls[0][0]
-    expect(record.schemaVersion).toBe(4)
+    expect(record.schemaVersion).toBe(5)
     expect(record.pattern5hId).toBeDefined()
     expect(record.triggerVerb).toBeDefined()
     expect(record.patternQuizCorrect).toBe(true)
@@ -248,7 +251,7 @@ describe('learningStore isAssemblyCorrect', () => {
 
 // End-to-end: drive the natural 7-step chain and assert BOTH persisted artifacts.
 describe('learningStore end-to-end walkthrough', () => {
-  it('persists a deduped pattern + a v4 record with assemblyCorrect=true', async () => {
+  it('persists a deduped pattern + a v5 record with assemblyCorrect=true', async () => {
     const localStorage = await import('./localStorage')
     const patternSpy = vi.spyOn(localStorage.localStorageAdapter, 'savePattern')
     const recordSpy = vi.spyOn(localStorage.localStorageAdapter, 'saveLearningRecord')
@@ -288,7 +291,7 @@ describe('learningStore end-to-end walkthrough', () => {
 
     expect(recordSpy).toHaveBeenCalledTimes(1)
     const record = recordSpy.mock.calls[0][0]
-    expect(record.schemaVersion).toBe(4)
+    expect(record.schemaVersion).toBe(5)
     expect(record.pattern5hId).toBe(payload.pattern5h.id)
     expect(record.assemblyCorrect).toBe(true)
     expect(record.patternQuizCorrect).toBe(true)
@@ -500,5 +503,152 @@ describe('learningStore event tracking', () => {
     const before = mem.events.length
     useLearningStore.getState().abandonIfActive('hidden')
     expect(mem.events.length).toBe(before)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Drives the store from startScenario through complete() via the correct-answer
+ * path, using the mock payload (FIX_CAUSATIVE_BARE for 'seed').
+ * Must be called AFTER store.startScenario() is called.
+ */
+async function flushToComplete(store: ReturnType<typeof useLearningStore.getState>) {
+  await vi.waitFor(() => expect(useLearningStore.getState().payloadStatus).toBe('ready'))
+
+  const payload = useLearningStore.getState().payload!
+  const correctOrder = [...payload.assembly.blocks]
+    .sort((a, b) => a.order - b.order)
+    .map((b) => b.id)
+  const correctConn = payload.assembly.connectors.find((c) => c.isCorrect)!.id
+
+  store.advanceFromEmpathy()
+  store.submitPrecheck('first')
+  await vi.waitFor(() => expect(useLearningStore.getState().currentStep).toBe('step0'))
+  store.submitPatternQuiz({ correct: true, unsure: false })
+  store.advanceToStep1()
+  correctOrder.forEach((id) => store.tapBlock(id))
+  store.tapConnector(correctConn)
+  store.advanceToStep2()
+  await store.advanceToStep3()
+  store.submitAfterChoice('first')
+  store.advanceToStep4()
+  await store.complete()
+}
+
+// ---------------------------------------------------------------------------
+// SRS schedule-on-complete tests
+// ---------------------------------------------------------------------------
+
+describe('complete() applies FSRS schedule', () => {
+  it('grades the session and calls updatePatternSchedule on the played card', async () => {
+    const spy = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
+    vi.spyOn(db, 'getPattern').mockResolvedValue(null) // new card path
+    vi.spyOn(db, 'getPatterns').mockResolvedValue([])  // no other due cards -> skip bypass
+
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await flushToComplete(store)
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    const [pid, verb, partial] = spy.mock.calls[0]
+    expect(typeof pid).toBe('string')
+    expect(typeof verb).toBe('string')
+    expect(partial).toHaveProperty('nextDueAt')
+    expect(partial).toHaveProperty('lastGrade')
+    expect(partial.bypassedCount).toBe(0)
+  })
+
+  it('bumps bypassedCount on other due cards and not on the played card', async () => {
+    const { mockSessionPayload } = await import('../services/mocks')
+    const payload = await mockSessionPayload('seed')
+    const pid = payload.pattern5h.id
+    const verb = payload.pattern5h.triggerVerb
+
+    // One other due card (different key) + the played card itself (should be RESET not bumped)
+    const otherCard = {
+      id: 'other-card',
+      template: 'I saw ~ cry',
+      patternId: 'perception' as const,
+      triggerVerb: 'see',
+      category: '경험/서사' as const,
+      tags: [],
+      exampleOriginal: 'x',
+      exampleEnglish: 'y',
+      savedAt: '2026-01-01T00:00:00Z',
+      reviewCount: 1,
+      lastReviewedAt: null,
+      stability: null,
+      difficulty: null,
+      nextDueAt: null, // due (unscheduled)
+      reps: 0,
+      lapses: 0,
+      bypassedCount: 2,
+      cardState: 'new' as const,
+      lastGrade: null,
+    }
+
+    const updateSpy = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
+    vi.spyOn(db, 'getPattern').mockResolvedValue(null)
+    vi.spyOn(db, 'getPatterns').mockResolvedValue([otherCard])
+
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await flushToComplete(store)
+
+    // First call: played card schedule (bypassedCount reset to 0)
+    expect(updateSpy.mock.calls[0][0]).toBe(pid)
+    expect(updateSpy.mock.calls[0][1]).toBe(verb)
+    expect(updateSpy.mock.calls[0][2].bypassedCount).toBe(0)
+
+    // Second call: other due card — bypassedCount bumped from 2 to 3
+    expect(updateSpy.mock.calls[1][0]).toBe('perception')
+    expect(updateSpy.mock.calls[1][1]).toBe('see')
+    expect(updateSpy.mock.calls[1][2].bypassedCount).toBe(3)
+
+    expect(updateSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('does NOT bump the played card via bypass loop even if getPatterns includes it', async () => {
+    const { mockSessionPayload } = await import('../services/mocks')
+    const payload = await mockSessionPayload('seed')
+    const pid = payload.pattern5h.id
+    const verb = payload.pattern5h.triggerVerb
+
+    const playedCard = {
+      id: 'played',
+      template: 'I made him ~',
+      patternId: pid,
+      triggerVerb: verb,
+      category: '감정/관계' as const,
+      tags: [],
+      exampleOriginal: '그가 화내게 만들었어',
+      exampleEnglish: 'I made him angry.',
+      savedAt: '2026-01-01T00:00:00Z',
+      reviewCount: 1,
+      lastReviewedAt: null,
+      stability: null,
+      difficulty: null,
+      nextDueAt: null,
+      reps: 0,
+      lapses: 0,
+      bypassedCount: 1,
+      cardState: 'new' as const,
+      lastGrade: null,
+    }
+
+    const updateSpy = vi.spyOn(db, 'updatePatternSchedule').mockResolvedValue(undefined)
+    vi.spyOn(db, 'getPattern').mockResolvedValue(null)
+    vi.spyOn(db, 'getPatterns').mockResolvedValue([playedCard]) // only the played card
+
+    const store = useLearningStore.getState()
+    store.startScenario(sampleScenario)
+    await flushToComplete(store)
+
+    // Only 1 call: the played card's schedule. No bypass bump for the played card.
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+    expect(updateSpy.mock.calls[0][2].bypassedCount).toBe(0)
   })
 })

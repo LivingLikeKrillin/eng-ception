@@ -27,4 +27,7 @@ export const db: DataStore = {
   savePattern: (p) => activeAdapter.savePattern(p),
   getPatterns: () => activeAdapter.getPatterns(),
   deletePattern: (id) => activeAdapter.deletePattern(id),
+  getPattern: (patternId, triggerVerb) => activeAdapter.getPattern(patternId, triggerVerb),
+  updatePatternSchedule: (patternId, triggerVerb, partial) =>
+    activeAdapter.updatePatternSchedule(patternId, triggerVerb, partial),
 }
