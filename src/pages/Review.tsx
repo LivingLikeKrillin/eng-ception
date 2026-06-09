@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
-import { dueQueue } from '../services/srsView'
+import { dueQueue, nextDueDate } from '../services/srsView'
+import { masterySummary, formatRelativeDay } from '../services/progress'
 import { N_BYPASS } from '../services/srs'
 import { PATTERN_LABEL } from '../data/patternLabels'
 import CircuitDiagnostic from '../components/review/CircuitDiagnostic'
@@ -20,6 +21,8 @@ export default function Review() {
   }, [])
 
   const due = useMemo(() => dueQueue(patterns, now), [patterns, now])
+  const nextDue = useMemo(() => nextDueDate(patterns, now), [patterns, now])
+  const summary = useMemo(() => masterySummary(patterns), [patterns])
 
   const rePractice = (korean: string) =>
     navigate('/learn/custom', { state: { input: korean } })
@@ -31,15 +34,22 @@ export default function Review() {
           Review
         </p>
         <h1 className="text-[24px] font-bold tracking-tight text-t1">복습</h1>
+        {patterns.length > 0 && (
+          <p className="text-[13px] text-t2 mt-1.5">
+            회로 <span className="font-en font-semibold text-t1">{summary.circuits}</span>
+            {' · '}숙련 <span className="font-en font-semibold text-accent">{summary.mastered}</span>
+          </p>
+        )}
       </div>
 
       <div className="flex-1 px-6 pb-6 space-y-8">
-        {/* Due queue — SRS re-practice */}
-        {due.length > 0 && (
+        {/* Due queue — SRS re-practice (all-caught-up state when empty) */}
+        {patterns.length > 0 && (
           <section>
             <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
-              오늘 복습 {due.length}
+              오늘 복습{due.length > 0 ? ` ${due.length}` : ''}
             </p>
+            {due.length > 0 ? (
             <div className="space-y-2">
               {due.map((c) => (
                 <div key={c.id} className="bg-c border border-line rounded-[14px] px-4 py-3 space-y-2">
@@ -59,6 +69,14 @@ export default function Review() {
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="bg-c border border-line rounded-[14px] px-4 py-5 text-center">
+                <p className="text-sm text-t2">오늘 복습 다 끝났어요 ✓</p>
+                {nextDue && (
+                  <p className="text-[11px] text-t3 mt-1">다음 복습: {formatRelativeDay(nextDue, now)}</p>
+                )}
+              </div>
+            )}
           </section>
         )}
 
