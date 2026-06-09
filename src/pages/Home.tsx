@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
 import { dueQueue, nextDueDate } from '../services/srsView'
-import { computeStreak, completedTodayCount, pickScenariosForHome, formatRelativeDay } from '../services/progress'
+import { computeStreak, reviewedToday, pickScenariosForHome, formatRelativeDay } from '../services/progress'
 import { parseShareText } from '../services/shareTarget'
 import { seedScenarios } from '../data/seed-scenarios'
 import type { Scenario, Capture } from '../types'
@@ -36,8 +36,8 @@ export default function Home() {
       setScenarios(pickScenariosForHome(scenarios, records, 3))
       setHasCompletedSession(records.length > 0)
       setDueCount(dueQueue(patterns, now).length)
-      setStreak(computeStreak(records, now))
-      setCompletedToday(completedTodayCount(records, now) > 0)
+      setStreak(computeStreak(records, patterns, now))
+      setCompletedToday(reviewedToday(records, patterns, now))
       setCaptures(await db.getCaptures())
       const nd = nextDueDate(patterns, now)
       const rel = nd ? formatRelativeDay(nd, now) : null

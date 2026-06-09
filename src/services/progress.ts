@@ -13,11 +13,23 @@ const dayKeyOf = (d: Date): string => localDayKey(d.toISOString())
 const prevDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)
 const midnight = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
-// Consecutive local-days with >=1 completed session, ending today or (grace) yesterday.
-// Day stepping uses local calendar dates (not ms subtraction) so DST can't drop/double a day.
-export function computeStreak(records: LearningRecord[], now: Date): number {
-  if (records.length === 0) return 0
-  const active = new Set(records.map((r) => localDayKey(r.completedAt)))
+// Local-days with any review activity: a completed session (record.completedAt) OR a card
+// review (pattern.lastReviewedAt — set by applyReview for full sessions AND offline recall).
+// This makes offline recall count toward the streak with no extra storage. lastReviewedAt is
+// per-card-latest, but SRS pushes a reviewed card's next due forward, so daily activity lands
+// on different due cards → each day is preserved in the union.
+function activeDayKeys(records: LearningRecord[], patterns: Pattern[]): Set<string> {
+  const days = new Set<string>()
+  for (const r of records) days.add(localDayKey(r.completedAt))
+  for (const p of patterns) if (p.lastReviewedAt) days.add(localDayKey(p.lastReviewedAt))
+  return days
+}
+
+// Consecutive local-days with activity, ending today or (grace) yesterday. Day stepping uses
+// local calendar dates (not ms subtraction) so DST can't drop/double a day.
+export function computeStreak(records: LearningRecord[], patterns: Pattern[], now: Date): number {
+  const active = activeDayKeys(records, patterns)
+  if (active.size === 0) return 0
   let cursor: Date
   if (active.has(dayKeyOf(now))) cursor = midnight(now)
   else if (active.has(dayKeyOf(prevDay(now)))) cursor = prevDay(now)
@@ -31,9 +43,9 @@ export function computeStreak(records: LearningRecord[], now: Date): number {
   return streak
 }
 
-export function completedTodayCount(records: LearningRecord[], now: Date): number {
-  const today = dayKeyOf(now)
-  return records.filter((r) => localDayKey(r.completedAt) === today).length
+// Daily-goal: any review activity today (session or recall).
+export function reviewedToday(records: LearningRecord[], patterns: Pattern[], now: Date): boolean {
+  return activeDayKeys(records, patterns).has(dayKeyOf(now))
 }
 
 export interface MasterySummary {
