@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import type { Firestore } from 'firebase/firestore'
 import { createFirestoreDataStore } from './firestoreDataStore'
 import type { LearningRecord, Pattern } from '../types'
+import { newCardDefaults } from '../services/srs'
 
 // Gate on the host the emulator itself provides (set by `firebase emulators:exec` via
 // auto-discovery), NOT a hand-set flag — so an accidental run without a live emulator
@@ -23,7 +24,8 @@ const makeRecord = (over: Partial<LearningRecord> = {}): LearningRecord => ({
 const makePattern = (over: Partial<Pattern> = {}): Pattern => ({
   id: 'p1', template: 'I made him ~', patternId: 'causative-bare', triggerVerb: 'make',
   category: 'c', tags: [], exampleOriginal: 'x', exampleEnglish: 'y',
-  savedAt: '2026-01-01T00:00:00Z', reviewCount: 0, lastReviewedAt: null, ...over,
+  savedAt: '2026-01-01T00:00:00Z', reviewCount: 0, lastReviewedAt: null,
+  ...newCardDefaults(), ...over,
 })
 
 describe.skipIf(!RUN)('FirestoreDataStore (emulator)', () => {

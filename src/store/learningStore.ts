@@ -3,6 +3,7 @@ import type { Scenario, Pattern, LearningRecord } from '../types'
 import type { SessionPayload, V9Step } from '../types/v9'
 import { fetchSessionPayload } from '../services/claude'
 import { track } from '../services/analytics'
+import { newCardDefaults } from '../services/srs'
 import { db } from './db'
 
 export interface PatternQuizAnswer {
@@ -240,6 +241,7 @@ export const useLearningStore = create<V9LearningState>((set, get) => {
         savedAt: new Date().toISOString(),
         reviewCount: 0,
         lastReviewedAt: null,
+        ...newCardDefaults(),
       }
       await db.savePattern(pattern)
       set({ patternSaved: true })

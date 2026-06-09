@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { localStorageAdapter } from './localStorage'
 import type { Pattern } from '../types'
+import { newCardDefaults } from '../services/srs'
 
 class MemStorage {
   private m = new Map<string, string>()
@@ -61,6 +62,7 @@ describe('localStorageAdapter.savePattern dedup', () => {
       savedAt: new Date().toISOString(),
       reviewCount: 0,
       lastReviewedAt: null,
+      ...newCardDefaults(),
       ...overrides,
     }
   }

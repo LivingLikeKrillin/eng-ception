@@ -13,11 +13,11 @@ export interface Scenario {
   createdAt: string
 }
 
-// --- 학습 기록 (v9 schema v4) ---
+// --- 학습 기록 (v9 schema v4/v5) ---
 
 export interface LearningRecord {
   id: string
-  schemaVersion: 4
+  schemaVersion: 4 | 5
   scenarioId: string | null
   originalKorean: string
   structureTypeId: string
@@ -45,4 +45,13 @@ export interface Pattern {
   savedAt: string
   reviewCount: number
   lastReviewedAt: string | null
+  // --- FSRS schedule state (schema v5) ---
+  stability: number | null        // FSRS S (days); null = never scheduled
+  difficulty: number | null       // FSRS D (1..10); null = never scheduled
+  nextDueAt: string | null        // ISO; null = unscheduled ⇒ due now
+  reps: number                    // reviews applied
+  lapses: number                  // Again(1) count
+  bypassedCount: number           // avoidance counter (N=3 escalation)
+  cardState: 'new' | 'learning' | 'review' | 'relearning'
+  lastGrade: 1 | 2 | 3 | 4 | null
 }
