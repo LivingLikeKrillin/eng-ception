@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isDue, dueQueue, masteryLabel, rollupByPattern } from './srsView'
+import { isDue, dueQueue, masteryLabel, rollupByPattern, nextDueDate } from './srsView'
 import { newCardDefaults } from './srs'
 import type { Pattern } from '../types'
 
@@ -43,6 +43,22 @@ describe('dueQueue null-safety', () => {
     const b = card({ triggerVerb: 'have', nextDueAt: null })
     expect(() => dueQueue([a, b], NOW)).not.toThrow()
     expect(dueQueue([a, b], NOW)).toHaveLength(2)
+  })
+})
+
+describe('nextDueDate', () => {
+  it('returns the nearest FUTURE due date; excludes due-now and unscheduled', () => {
+    const cards = [
+      card({ triggerVerb: 'make', nextDueAt: '2026-06-10T00:00:00Z' }), // future
+      card({ triggerVerb: 'have', nextDueAt: '2026-06-15T00:00:00Z' }), // farther future
+      card({ triggerVerb: 'let', nextDueAt: '2026-06-08T00:00:00Z' }),  // past (due now)
+      card({ triggerVerb: 'get', patternId: 'causative-toV', nextDueAt: null }), // unscheduled
+    ]
+    expect(nextDueDate(cards, NOW)?.toISOString()).toBe('2026-06-10T00:00:00.000Z')
+  })
+  it('returns null when nothing is scheduled in the future', () => {
+    expect(nextDueDate([card({ nextDueAt: null }), card({ nextDueAt: '2026-06-01T00:00:00Z' })], NOW)).toBeNull()
+    expect(nextDueDate([], NOW)).toBeNull()
   })
 })
 

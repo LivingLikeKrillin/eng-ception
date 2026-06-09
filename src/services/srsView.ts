@@ -32,6 +32,18 @@ export function dueQueue(cards: Pattern[], now: Date): Pattern[] {
     })
 }
 
+// Nearest FUTURE nextDueAt among scheduled cards. null = no future due (all due-now or
+// unscheduled). Exact-`now` boundary is excluded (treated as due-now), consistent with isDue's `<=`.
+export function nextDueDate(cards: Pattern[], now: Date): Date | null {
+  let min: number | null = null
+  for (const c of cards) {
+    if (c.nextDueAt == null) continue
+    const t = new Date(c.nextDueAt).getTime()
+    if (t > now.getTime() && (min === null || t < min)) min = t
+  }
+  return min === null ? null : new Date(min)
+}
+
 export type MasteryLabel = '새내기' | '학습중' | '숙련'
 
 export function masteryLabel(card: Pattern): MasteryLabel {
