@@ -1,28 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
+import { dueQueue } from '../services/srsView'
+import { N_BYPASS } from '../services/srs'
+import { PATTERN_LABEL } from '../data/patternLabels'
+import CircuitDiagnostic from '../components/review/CircuitDiagnostic'
 import type { LearningRecord, Pattern } from '../types'
-import type { Pattern5HId } from '../types/v9'
-
-const PATTERN_LABEL: Record<Pattern5HId, string> = {
-  'causative-bare':   '사역',
-  'causative-toV':    '사역(get+toV)',
-  'causative-result': '사역 결과',
-  'perception':       '지각',
-  'want-toV':         '요청/희망',
-  'judgment':         '판단',
-  'ditransitive':     '수여',
-}
 
 export default function Review() {
   const [records, setRecords] = useState<LearningRecord[]>([])
   const [patterns, setPatterns] = useState<Pattern[]>([])
   const navigate = useNavigate()
 
+  const now = useMemo(() => new Date(), [])
+
   useEffect(() => {
     db.getLearningRecords().then((r) => setRecords(r.reverse()))
     db.getPatterns().then(setPatterns)
   }, [])
+
+  const due = useMemo(() => dueQueue(patterns, now), [patterns, now])
+
+  const rePractice = (korean: string) =>
+    navigate('/learn/custom', { state: { input: korean } })
 
   return (
     <div className="flex-1 flex flex-col">
@@ -34,6 +34,40 @@ export default function Review() {
       </div>
 
       <div className="flex-1 px-6 pb-6 space-y-8">
+        {/* Due queue — SRS re-practice */}
+        {due.length > 0 && (
+          <section>
+            <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
+              오늘 복습 {due.length}
+            </p>
+            <div className="space-y-2">
+              {due.map((c) => (
+                <div key={c.id} className="bg-c border border-line rounded-[14px] px-4 py-3 space-y-2">
+                  <p className="text-sm text-t2 leading-relaxed">{c.exampleOriginal}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="inline-block text-[11px] font-medium text-accent bg-accent/[0.08] px-2 py-0.5 rounded">
+                      {PATTERN_LABEL[c.patternId]} · <span className="font-en">{c.triggerVerb}</span>
+                      {c.bypassedCount >= N_BYPASS && <span className="ml-1 text-warn">· 회피 중</span>}
+                    </span>
+                    <button
+                      onClick={() => rePractice(c.exampleOriginal)}
+                      className="text-[11px] text-accent font-semibold hover:opacity-80 transition"
+                    >
+                      복습하기 →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Circuit Diagnostic — 2-layer mastery view */}
+        {patterns.length > 0 && (
+          <CircuitDiagnostic patterns={patterns} now={now} />
+        )}
+
+        {/* Saved Patterns */}
         {patterns.length > 0 && (
           <section>
             <p className="text-[11px] font-semibold text-t3 mb-3 tracking-wider uppercase font-en">
