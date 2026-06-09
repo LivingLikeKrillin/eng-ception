@@ -4,10 +4,9 @@ import { test, expect } from '@playwright/test'
 // 1. Complete a full session (7 steps) to produce a saved pattern
 // 2. Backdate the pattern's nextDueAt to the past (simulating an overdue card) via localStorage
 // 3. Navigate to 복습 and assert the "오늘 복습" section appears
-// 4. Tap "복습하기 →" and assert the empathy screen fires
-//    (Learn.tsx auto-fires startCustom when location.state.input is set → empathy is shown directly,
-//     NOT the custom-input textarea)
-test('srs: complete session -> due card in 복습 -> re-practice reaches empathy', async ({ page }) => {
+// 4. Tap "복습 →" and assert the OFFLINE recall card (no API): reveal English, self-rate,
+//    overlay closes (the card is rescheduled out of the due queue).
+test('srs: complete session -> due card in 복습 -> offline recall reschedules', async ({ page }) => {
   await page.goto('/learn/custom')
 
   // --- Complete a full 7-step session (mirrors learn-flow.spec.ts walkthrough) ---
@@ -69,10 +68,15 @@ test('srs: complete session -> due card in 복습 -> re-practice reaches empathy
   // Due queue should have a card (backdated to yesterday)
   await expect(page.getByText(/오늘 복습/)).toBeVisible({ timeout: 5_000 })
 
-  // Tap 복습하기 → on the first due card
-  await page.getByRole('button', { name: '복습하기 →' }).first().click()
+  // Tap 복습 → on the first due card → offline recall overlay (no API call)
+  await page.getByRole('button', { name: '복습 →' }).first().click()
+  await expect(page.getByTestId('recall-card')).toBeVisible()
 
-  // Learn.tsx auto-fires startCustom when state.input is set →
-  // the custom-input screen is skipped; assert empathy screen appears directly.
-  await expect(page.getByRole('heading', { name: '이걸 영어로 말한다면' })).toBeVisible({ timeout: 15_000 })
+  // Korean prompt shown; reveal the stored English (no network)
+  await page.getByRole('button', { name: '영어 보기' }).click()
+  await expect(page.getByTestId('recall-card').getByText('I made him angry.')).toBeVisible()
+
+  // Self-rate 정확 → card rescheduled, overlay closes
+  await page.getByRole('button', { name: '정확' }).click()
+  await expect(page.getByTestId('recall-card')).toBeHidden()
 })

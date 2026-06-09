@@ -3,14 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { db } from '../store/db'
 import { dueQueue, nextDueDate } from '../services/srsView'
 import { masterySummary, formatRelativeDay } from '../services/progress'
-import { N_BYPASS } from '../services/srs'
+import { N_BYPASS, type Grade } from '../services/srs'
+import { applyReview } from '../services/applyReview'
 import { PATTERN_LABEL } from '../data/patternLabels'
 import CircuitDiagnostic from '../components/review/CircuitDiagnostic'
+import RecallCard from '../components/review/RecallCard'
 import type { LearningRecord, Pattern } from '../types'
 
 export default function Review() {
   const [records, setRecords] = useState<LearningRecord[]>([])
   const [patterns, setPatterns] = useState<Pattern[]>([])
+  const [recallCard, setRecallCard] = useState<Pattern | null>(null)
   const navigate = useNavigate()
 
   const now = useMemo(() => new Date(), [])
@@ -24,8 +27,13 @@ export default function Review() {
   const nextDue = useMemo(() => nextDueDate(patterns, now), [patterns, now])
   const summary = useMemo(() => masterySummary(patterns), [patterns])
 
-  const rePractice = (korean: string) =>
-    navigate('/learn/custom', { state: { input: korean } })
+  // Offline recall: self-rate advances the FSRS schedule (no API, no LearningRecord).
+  const handleRecallGrade = async (grade: Grade) => {
+    if (!recallCard) return
+    await applyReview(recallCard.patternId, recallCard.triggerVerb, grade, new Date())
+    setRecallCard(null)
+    setPatterns(await db.getPatterns()) // refresh due queue / summary
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -60,10 +68,10 @@ export default function Review() {
                       {c.bypassedCount >= N_BYPASS && <span className="ml-1 text-warn">· 회피 중</span>}
                     </span>
                     <button
-                      onClick={() => rePractice(c.exampleOriginal)}
+                      onClick={() => setRecallCard(c)}
                       className="text-[11px] text-accent font-semibold hover:opacity-80 transition"
                     >
-                      복습하기 →
+                      복습 →
                     </button>
                   </div>
                 </div>
@@ -150,6 +158,10 @@ export default function Review() {
           )}
         </section>
       </div>
+
+      {recallCard && (
+        <RecallCard card={recallCard} onGrade={handleRecallGrade} onClose={() => setRecallCard(null)} />
+      )}
     </div>
   )
 }
