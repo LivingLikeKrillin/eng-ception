@@ -99,8 +99,8 @@ export interface SessionPayload {
   }
 
   assembly: {
-    blocks: Block[]             // exactly 3
-    blockRoles: BlockRole[]     // length 3; blockRoles[i] is the role of block with order = i+1
+    blocks: Block[]             // 2..3 (v9.1: 간결형 may be 2)
+    blockRoles: BlockRole[]     // length === blocks.length; blockRoles[i] is the role of block with order = i+1
     connectors: Connector[]     // 2..3, exactly one correct
     finalSentence: string
   }
@@ -146,7 +146,7 @@ export interface PatternQuizOption {
 export interface Block {
   id: 'b1' | 'b2' | 'b3'
   en: string
-  order: 1 | 2 | 3              // assembly order
+  order: 1 | 2 | 3              // assembly order (2..3 blocks; v9.1 간결형 may use only b1/b2)
 }
 
 export interface Connector {
