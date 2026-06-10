@@ -2,34 +2,38 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLearningStore } from '../store/learningStore'
 import { db } from '../store/db'
+import { sessionToBootstrap } from './learnRoute'
 import LearningFlow from '../components/learning/LearningFlow'
 
 export default function Learn() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { currentStep, startScenario, startCustom, originalKorean } =
+  const { currentStep, startScenario, startCustom, originalKorean, scenario, isCustomInput } =
     useLearningStore()
   const passedInput = (location.state as { input?: string })?.input ?? ''
   const [customInput, setCustomInput] = useState(passedInput)
   const isCustom = id === 'custom' || !id
 
   useEffect(() => {
-    // Only bootstrap the session when we're at the initial step.
-    // Without this guard, any later currentStep change would re-trigger
-    // startScenario/startCustom and wipe the in-progress session state.
-    if (currentStep !== 'input') return
-
-    if (!isCustom && id) {
-      db.getScenario(id).then((scenario) => {
-        if (scenario) startScenario(scenario)
+    // Bootstrap based on the route vs. the session actually running — not just
+    // `currentStep === 'input'`. The store is global and survives navigation, so a
+    // bare step guard left a stale session on screen when tapping a DIFFERENT scenario
+    // (every Home example showed whichever was started first). sessionToBootstrap
+    // restarts on a route mismatch and preserves an in-progress match (no re-trigger loop).
+    const action = sessionToBootstrap(
+      { id, isCustom, passedInput },
+      { currentStep, scenarioId: scenario?.id ?? null, isCustomInput, originalKorean },
+    )
+    if (action === 'scenario' && id) {
+      db.getScenario(id).then((s) => {
+        if (s) startScenario(s)
         else navigate('/')
       })
-    }
-    if (isCustom && passedInput.trim()) {
+    } else if (action === 'custom') {
       startCustom(passedInput)
     }
-  }, [id, isCustom, startScenario, startCustom, navigate, passedInput, currentStep])
+  }, [id, isCustom, passedInput, currentStep, scenario, isCustomInput, originalKorean, startScenario, startCustom, navigate])
 
   if (isCustom && currentStep === 'input') {
     return (
