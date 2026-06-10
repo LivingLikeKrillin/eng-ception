@@ -24,6 +24,11 @@ html, body {
   font-family: var(--font-ko);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.2px;
+  /* The step entrance animations (.sfr/.sfl) translate full-width content ±24px on the
+     X axis, briefly pushing it past the viewport. Without this, each step transition
+     spawns a transient horizontal scroll that disrupts the fixed bottom nav (shifts it
+     right, jitters its height). Clip the X axis so the slide animates within bounds. */
+  overflow-x: hidden;
 }
 
 /* Move 3 — atmospheric depth.

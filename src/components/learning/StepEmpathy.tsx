@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
 import { useLearningStore } from '../../store/learningStore'
 
-const MIN_EMPATHY_MS = 2500
+// Floor before auto-advancing to precheck. Only bites when the payload is already
+// ready (content pack / mock load instantly) — a live API session waits for 'ready'
+// regardless, so this never shortens the latency mask. Kept just long enough to read
+// the warm one-liner; 2.5s felt like dead time once the pack made loads instant.
+const MIN_EMPATHY_MS = 1200
 
 export default function StepEmpathy() {
   const { payload, payloadStatus, advanceFromEmpathy } = useLearningStore()
