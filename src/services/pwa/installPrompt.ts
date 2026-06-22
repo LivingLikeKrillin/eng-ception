@@ -4,7 +4,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const DISMISS_KEY = 'eng-ception:install-dismissed'
+const DISMISS_KEY = 'engception:install-dismissed'
 
 let deferred: BeforeInstallPromptEvent | null = null
 const listeners = new Set<() => void>()

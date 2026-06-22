@@ -64,7 +64,7 @@ describe.skipIf(!RUN)('login data-flow (emulator): migrateToCloud + Firestore ad
 
   beforeAll(async () => {
     env = await initializeTestEnvironment({
-      projectId: 'demo-eng-ception',
+      projectId: 'demo-engception',
       firestore: { rules: readFileSync('firestore.rules', 'utf8') },
     })
   })

@@ -30,7 +30,7 @@ describe('localAnalyticsSink', () => {
 
   it('sets the events-version key on first write', async () => {
     localAnalyticsSink.track(ev(1))
-    expect(localStorage.getItem('eng-ception:events-version')).toBe('1')
+    expect(localStorage.getItem('engception:events-version')).toBe('1')
   })
 
   it('rotates oldest out when exceeding MAX_EVENTS (1000)', async () => {

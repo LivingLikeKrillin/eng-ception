@@ -1,5 +1,5 @@
 {
-  "name": "eng-ception",
+  "name": "engception",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:emulator": "firebase emulators:exec --only auth,firestore --project demo-eng-ception \"vitest run --no-file-parallelism src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts src/services/migrateToCloud.emulator.test.ts\""
+    "test:emulator": "firebase emulators:exec --only auth,firestore --project demo-engception \"vitest run --no-file-parallelism src/store/firestoreDataStore.test.ts src/firestore.rules.test.ts src/services/migrateToCloud.emulator.test.ts\""
   },
   "dependencies": {
     "express": "^5.2.1",

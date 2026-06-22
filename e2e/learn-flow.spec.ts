@@ -68,13 +68,13 @@ test('v9 7-step learning flow renders end-to-end in mock mode', async ({ page })
   await expect(page).toHaveURL('http://localhost:5219/')
 
   // --- Persistence: a verb-specific pattern + a v6 record landed in localStorage ---
-  const patternsRaw = await page.evaluate(() => localStorage.getItem('eng-ception:patterns'))
+  const patternsRaw = await page.evaluate(() => localStorage.getItem('engception:patterns'))
   const patterns = JSON.parse(patternsRaw ?? '[]')
   expect(patterns.length).toBeGreaterThanOrEqual(1)
   expect(patterns[0].patternId).toBeTruthy()
   expect(patterns[0].triggerVerb).toBeTruthy()
 
-  const recordsRaw = await page.evaluate(() => localStorage.getItem('eng-ception:records'))
+  const recordsRaw = await page.evaluate(() => localStorage.getItem('engception:records'))
   const records = JSON.parse(recordsRaw ?? '[]')
   expect(records.length).toBeGreaterThanOrEqual(1)
   expect(records[0].schemaVersion).toBe(6)

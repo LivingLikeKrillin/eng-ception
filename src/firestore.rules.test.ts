@@ -17,7 +17,7 @@ describe.skipIf(!RUN)('firestore security rules', () => {
   let env: RulesTestEnvironment
   beforeAll(async () => {
     env = await initializeTestEnvironment({
-      projectId: 'demo-eng-ception',
+      projectId: 'demo-engception',
       firestore: { rules: readFileSync('firestore.rules', 'utf8') },
     })
   })

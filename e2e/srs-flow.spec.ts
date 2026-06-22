@@ -54,12 +54,12 @@ test('srs: complete session -> due card in 복습 -> offline recall reschedules'
   // After complete(), FSRS schedules the card to a future date. For the UI test we
   // force the card overdue by setting nextDueAt to yesterday via localStorage.
   await page.evaluate(() => {
-    const raw = localStorage.getItem('eng-ception:patterns')
+    const raw = localStorage.getItem('engception:patterns')
     if (!raw) return
     const patterns = JSON.parse(raw) as Array<Record<string, unknown>>
     const yesterday = new Date(Date.now() - 86_400_000).toISOString()
     patterns.forEach((p) => { p.nextDueAt = yesterday })
-    localStorage.setItem('eng-ception:patterns', JSON.stringify(patterns))
+    localStorage.setItem('engception:patterns', JSON.stringify(patterns))
   })
 
   // --- Navigate to 복습 ---

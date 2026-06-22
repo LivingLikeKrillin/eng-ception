@@ -1,4 +1,4 @@
-# Eng-ception
+# engception
 
 > 한국어 사고를 자연스러운 영어 구문으로 재배치 — 5형식 표현력을 회로에 박는 훈련
 > "정답을 주는 앱이 아니라, 말문을 여는 앱"
@@ -17,7 +17,7 @@ v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학�
 
 **v9.1 정정 — 5형식 = 인식 스킬, 강제 아님.** 세션은 입력이 **"5형식 모먼트"인지 판정**(`recognition.isFiveHMoment`)한다. 맞으면 5형식으로 끌어올리며 *이런 단서면 5형식*을 가르치고, 아니면 **간결형이 정답임을 인정**하고 *왜 5형식이 과한지·그 단서*를 가르친다. 한국인의 진짜 결손은 "5형식이 나은 *상황 자체*를 인식 못 함"이므로 목표는 강제가 아니라 **인식**. 자연 영어가 3형식인 자리에 5형식을 욱여넣으면 학습자의 구조 판단력을 해친다 → 금지. 모먼트면 `pattern5h`/`pattern` 채우고 SRS 카드 생성, 비모먼트면 `pattern5h`/`pattern`=null + 카드 미생성(LearningRecord는 기록). 설계: `docs/superpowers/specs/2026-06-10-v9.1-recognition-design.md`.
 
-**범위(scope): 말하기·텍스트 전용 web PWA.** 듣기/오디오/TTS는 별도 제품(engul)으로 분리됨 — 이 앱에 오디오 없음. 네이티브(RN)는 보류.
+**범위(scope): 말하기·텍스트 전용 web PWA.** 듣기/오디오/TTS는 별도 제품(engception-listen)으로 분리됨 — 이 앱에 오디오 없음. 네이티브(RN)는 보류.
 
 ## 기술 스택
 
@@ -35,7 +35,7 @@ v9에서 **5형식이 1급(first-class) 축**이 됐다. 한국 중·고급 학�
 ## 프로젝트 구조
 
 ```
-eng-ception/
+engception/
 ├── api/
 │   └── chat.ts                   # Vercel Edge Function (Claude API 프록시, model claude-sonnet-4-6)
 ├── e2e/
@@ -71,7 +71,7 @@ eng-ception/
 │   │   ├── localStorage.ts       # LocalStorage 어댑터 (schema v6; v4/v5→v6 비파괴 마이그레이션)
 │   │   ├── firestoreDataStore.ts # createFirestoreDataStore(fs,uid) — Firestore 어댑터 (withDefaults FSRS 백필)
 │   │   ├── analyticsSink.ts      # AnalyticsSink 인터페이스 + noop + MemoryAnalyticsSink
-│   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (eng-ception:events)
+│   │   ├── localAnalyticsSink.ts # localStorage 링버퍼 sink (engception:events)
 │   │   ├── firestoreAnalyticsSink.ts # createFirestoreAnalyticsSink(fs,uid) — Firestore 텔레메트리 sink
 │   │   ├── auth.ts               # 구글 로그인 + 어댑터/sink 스왑 reaction의 단일 소유자
 │   │   └── learningStore.ts      # Zustand 7스텝 세션 상태 + isAssemblyCorrect + 이벤트 계측 + complete() SRS 스케줄링
@@ -110,7 +110,7 @@ eng-ception/
 │               └── PatternNoteCard.tsx
 ├── dev-server.js                 # 로컬 개발용 Express API 프록시 (model claude-sonnet-4-6)
 ├── firebase.json                 # 에뮬레이터 설정 (auth 9099 / firestore 8080) + rules 포인터
-├── .firebaserc                   # 기본 프로젝트 demo-eng-ception (demo- 접두사 → 실 클라우드 불필요)
+├── .firebaserc                   # 기본 프로젝트 demo-engception (demo- 접두사 → 실 클라우드 불필요)
 ├── firestore.rules               # 보안 규칙 — /users/{uid}/** 본인만 read/write
 ├── playwright.config.ts          # e2e — vite strict port 5219, mock 모드
 ├── pwa-assets.config.ts          # @vite-pwa/assets-generator 설정 (logo.png → 아이콘 세트)
@@ -204,7 +204,7 @@ Zustand 스토어가 7스텝 세션 전체를 관리한다. 세션 시작 시 `r
 
 ## 이벤트 트래킹 (event tracking)
 
-세션의 **행동·시간 레이어**를 포착 — `LearningRecord`(완료 시에만 저장)가 못 보는 이탈 세션/단계별 시간/fetch 지연. `services/analytics.ts`의 `track(name, props, sessionId)` 파사드가 content-free `AnalyticsEvent`를 swappable `AnalyticsSink`로 보냄. 기본 sink는 noop; `main.tsx`가 `localAnalyticsSink`(localStorage 링버퍼, `eng-ception:events`, 자체 version key, MAX 1000 회전)를 주입 (`VITE_DISABLE_ANALYTICS=true`면 비활성, noop 유지). 계측은 `learningStore`에 집중 — `transitionTo`(단계별 dwell), 타임드 `runFetch`(fetch_start/success/error + `classifyError` kind), `complete`(session_complete), 공개 `abandonIfActive(reason)`(reset/restart + `visibilitychange` 리스너로 탭 종료 drop-off; `sessionEnded` 가드로 중복 방지). 7종 이벤트: `session_start`/`session_complete`/`session_abandon`/`step_dwell`/`fetch_start`/`fetch_success`/`fetch_error`. 이벤트는 PIPA-safe (raw 한국어/영어 없음 — id/pattern/bool/타이밍만). dev에서 `window.__engEvents()`(=globalThis)로 확인. Firebase/PostHog sink는 동일 `AnalyticsSink` 인터페이스로 나중 슬롯인 (DataStore 평행). 설계: `docs/superpowers/specs/2026-06-07-event-tracking-design.md`.
+세션의 **행동·시간 레이어**를 포착 — `LearningRecord`(완료 시에만 저장)가 못 보는 이탈 세션/단계별 시간/fetch 지연. `services/analytics.ts`의 `track(name, props, sessionId)` 파사드가 content-free `AnalyticsEvent`를 swappable `AnalyticsSink`로 보냄. 기본 sink는 noop; `main.tsx`가 `localAnalyticsSink`(localStorage 링버퍼, `engception:events`, 자체 version key, MAX 1000 회전)를 주입 (`VITE_DISABLE_ANALYTICS=true`면 비활성, noop 유지). 계측은 `learningStore`에 집중 — `transitionTo`(단계별 dwell), 타임드 `runFetch`(fetch_start/success/error + `classifyError` kind), `complete`(session_complete), 공개 `abandonIfActive(reason)`(reset/restart + `visibilitychange` 리스너로 탭 종료 drop-off; `sessionEnded` 가드로 중복 방지). 7종 이벤트: `session_start`/`session_complete`/`session_abandon`/`step_dwell`/`fetch_start`/`fetch_success`/`fetch_error`. 이벤트는 PIPA-safe (raw 한국어/영어 없음 — id/pattern/bool/타이밍만). dev에서 `window.__engEvents()`(=globalThis)로 확인. Firebase/PostHog sink는 동일 `AnalyticsSink` 인터페이스로 나중 슬롯인 (DataStore 평행). 설계: `docs/superpowers/specs/2026-06-07-event-tracking-design.md`.
 
 ## SRS (간격 반복)
 
@@ -242,7 +242,7 @@ Time-to-Stabilization A/B, dynamic N, 사용자별 가중치 최적화, intro-ph
 - **어댑터:** `createFirestoreDataStore(fs, uid)` / `createFirestoreAnalyticsSink(fs, uid)` 팩토리 (Firestore+uid 주입 → 테스트는 에뮬레이터 인스턴스 주입). 시나리오는 번들 seed라 Firestore에 저장 안 함; records `/users/{uid}/records/{id}`, patterns `/users/{uid}/patterns/{patternId__triggerVerb}` (복합키=doc id). **패턴 dedup = `setDoc`+`increment(1)` (offline 큐잉됨; `runTransaction` 아님 — 서버 왕복이라 오프라인서 실패).** `MAX_RECORDS` 캡 없음(클라우드는 전량 보관).
 - **로그인 병합:** `services/migrateToCloud.ts` — 로컬 records/patterns를 비파괴 union으로 클라우드에 올리고, **모든 쓰기 성공 시에만** 로컬 클리어 (실패 시 로컬 보존, 손실 없음). 이벤트는 마이그레이션 안 함(content-free 일회성).
 - **auth:** `store/auth.ts`가 스왑의 단일 소유자 — `registerAuthReaction()`(부트스트랩, 설정 시에만), `signInWithGoogle/signOutUser/onUserChanged`. `migratedUid` 가드(토큰 갱신 중복 방지), merge 실패 시 스왑 안 함+로그. **`VITE_DISABLE_ANALYTICS` 존중: setSink만 게이트, `setDbAdapter`는 무조건** (데이터는 항상 동기화, 텔레메트리만 비활성). UI: `components/common/AuthControl.tsx`(미설정 시 null 렌더, 실패한 로그인 표시).
-- **보안 규칙:** `firestore.rules` — `/users/{uid}/**` 본인만 read/write. **에뮬레이터 우선 개발:** `firebase.json`/`.firebaserc`(demo-eng-ception, 실 클라우드 불필요). `npm run test:emulator`(Java 필요)는 `firebase emulators:exec`로 자동 기동, 게이트는 `FIRESTORE_EMULATOR_HOST`(exec가 set) — 잘못 돌려도 깨끗이 skip.
+- **보안 규칙:** `firestore.rules` — `/users/{uid}/**` 본인만 read/write. **에뮬레이터 우선 개발:** `firebase.json`/`.firebaserc`(demo-engception, 실 클라우드 불필요). `npm run test:emulator`(Java 필요)는 `firebase emulators:exec`로 자동 기동, 게이트는 `FIRESTORE_EMULATOR_HOST`(exec가 set) — 잘못 돌려도 깨끗이 skip.
 - **phase 2 (이번 범위 밖):** 카카오 로그인(Firebase 네이티브 미지원 → custom-token Cloud Function + Blaze), Cloud Functions 전반, 프로덕션 프로비저닝(체크리스트는 spec §10). 설계: `docs/superpowers/specs/2026-06-07-firebase-migration-design.md`, 계획: `docs/superpowers/plans/2026-06-07-firebase-migration.md`.
 
 ## PWA
@@ -250,7 +250,7 @@ Time-to-Stabilization A/B, dynamic N, 사용자별 가중치 최적화, intro-ph
 범위 = **설치 경험(install experience) + 앱-쉘(app-shell) 캐싱**. 딥 오프라인(세션 데이터 오프라인 동작)·폰트 캐싱은 범위 밖.
 
 - **아이콘:** `@vite-pwa/assets-generator`가 `logo.png`에서 아이콘 세트를 생성 (`pwa-assets.config.ts`). 로고 바뀔 때만 `npm run generate-pwa-assets`(= `npx @vite-pwa/assets-generator@1.0.2`, **on-demand·정확버전 핀** — 프로젝트 devDep 아님; vite-plugin-pwa의 peer `^0.2.6`과 충돌해 `npm ci`가 깨지던 걸 회피, `-y` 없이 설치 프롬프트 노출)로 `public/` 산출물(pwa-64/192/512, maskable-512, apple-touch-180, favicon.ico) 갱신 후 커밋. 산출물이 커밋돼 있어 빌드/dev/test는 이 도구 불필요. manifest + iOS standalone meta는 `vite.config.ts`/`index.html`에 연결.
-- **설치 프롬프트:** `services/pwa/installPrompt.ts`가 `beforeinstallprompt`를 캡처(`registerInstallPrompt()`는 `main.tsx` 부트스트랩에서 `db.init()` 직후 1회) → mini-infobar 억제 후 자체 UI로 구동. `InstallBanner`(`components/common/`)는 **≥1 완료 세션 후** Home에 표시(안드로이드/데스크톱은 프롬프트 버튼, iOS Safari는 "공유 → 홈 화면에 추가" 힌트). dismiss는 `eng-ception:install-dismissed`로 영속화; standalone 실행 중엔 숨김. PIPA-safe (콘텐츠 없음).
+- **설치 프롬프트:** `services/pwa/installPrompt.ts`가 `beforeinstallprompt`를 캡처(`registerInstallPrompt()`는 `main.tsx` 부트스트랩에서 `db.init()` 직후 1회) → mini-infobar 억제 후 자체 UI로 구동. `InstallBanner`(`components/common/`)는 **≥1 완료 세션 후** Home에 표시(안드로이드/데스크톱은 프롬프트 버튼, iOS Safari는 "공유 → 홈 화면에 추가" 힌트). dismiss는 `engception:install-dismissed`로 영속화; standalone 실행 중엔 숨김. PIPA-safe (콘텐츠 없음).
 - **서비스 워커:** `vite-plugin-pwa`(Workbox)는 **빌드/preview 전용** (dev에선 비활성). `navigateFallbackDenylist:[/api]` + Firestore/Auth는 passthrough (캐시 안 함).
 - 설계: `docs/superpowers/specs/2026-06-08-pwa-design.md`.
 
