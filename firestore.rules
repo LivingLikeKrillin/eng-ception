@@ -1,8 +1,26 @@
 rules_version = '2';
+// ── 통합 규칙 (engception + engul 공유 프로젝트) ────────────────────────────
+// 이 파일은 engul/firestore.rules와 *동일한 슈퍼셋*으로 유지할 것.
+// 공유 Firebase 프로젝트는 Firestore 규칙이 하나뿐이라, 어느 레포가 배포하든
+// 같은 결과가 나오도록 두 파일을 일치시킨다(부분집합 배포 시 상대 규칙 유실).
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // 유저 데이터(engception) — 본인만 read/write.
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 받아쓰기 클립(engul).
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid in ['owner-dev'];  // ← 프로덕션 소유자 uid 추가
+    }
+    match /dictation_clips/{clipId} {
+      // published는 누구나 읽기(앱 소비). draft/archived는 소유자만.
+      allow read: if resource.data.status == 'published' || isOwner();
+      // 생성기는 admin SDK라 규칙 우회. 어드민 콘솔(발행/보류)은 소유자만.
+      allow write: if isOwner();
     }
   }
 }

@@ -39,13 +39,13 @@ function makePattern(overrides: Partial<Pattern> = {}): Pattern {
 describe('localStorageAdapter v6 migration (non-destructive)', () => {
   it('sets schema version to 6 when none exists', async () => {
     await localStorageAdapter.init()
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
+    expect(localStorage.getItem('engception:schema-version')).toBe('6')
   })
 
   it('backfills FSRS defaults + record isFiveHMoment and KEEPS records on v4->v6', async () => {
-    localStorage.setItem('eng-ception:schema-version', '4')
-    localStorage.setItem('eng-ception:records', '[{"id":"r1"}]')
-    localStorage.setItem('eng-ception:patterns', JSON.stringify([{
+    localStorage.setItem('engception:schema-version', '4')
+    localStorage.setItem('engception:records', '[{"id":"r1"}]')
+    localStorage.setItem('engception:patterns', JSON.stringify([{
       id: 'p1', template: 'I made him ~', patternId: 'causative-bare', triggerVerb: 'make',
       category: '감정/관계', tags: [], exampleOriginal: 'x', exampleEnglish: 'y',
       savedAt: '2026-01-01T00:00:00Z', reviewCount: 2, lastReviewedAt: null,
@@ -61,22 +61,22 @@ describe('localStorageAdapter v6 migration (non-destructive)', () => {
     expect(patterns[0].bypassedCount).toBe(0)
     expect(patterns[0].nextDueAt).toBeNull()
     expect(patterns[0].reviewCount).toBe(2) // preserved
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
+    expect(localStorage.getItem('engception:schema-version')).toBe('6')
   })
 
   it('non-destructive v5 -> v6: keeps records, backfills isFiveHMoment', async () => {
-    localStorage.setItem('eng-ception:schema-version', '5')
-    localStorage.setItem('eng-ception:records', '[{"id":"r1"}]')
+    localStorage.setItem('engception:schema-version', '5')
+    localStorage.setItem('engception:records', '[{"id":"r1"}]')
     await localStorageAdapter.init()
     const records = await localStorageAdapter.getLearningRecords()
     expect(records[0].id).toBe('r1')
     expect(records[0].isFiveHMoment).toBe(true)
-    expect(localStorage.getItem('eng-ception:schema-version')).toBe('6')
+    expect(localStorage.getItem('engception:schema-version')).toBe('6')
   })
 
   it('still clears on a pre-v4 (legacy) version', async () => {
-    localStorage.setItem('eng-ception:schema-version', '3')
-    localStorage.setItem('eng-ception:patterns', '[{"id":"old"}]')
+    localStorage.setItem('engception:schema-version', '3')
+    localStorage.setItem('engception:patterns', '[{"id":"old"}]')
     await localStorageAdapter.init()
     expect(await localStorageAdapter.getPatterns()).toEqual([])
   })
@@ -125,9 +125,9 @@ describe('localStorageAdapter captures', () => {
 
 describe('localStorageAdapter resilience', () => {
   it('returns [] and drops the key on corrupt JSON (no boot crash)', async () => {
-    localStorage.setItem('eng-ception:patterns', '{not valid json')
+    localStorage.setItem('engception:patterns', '{not valid json')
     expect(await localStorageAdapter.getPatterns()).toEqual([])
-    expect(localStorage.getItem('eng-ception:patterns')).toBeNull() // dropped
+    expect(localStorage.getItem('engception:patterns')).toBeNull() // dropped
   })
 
   it('saveLearningRecord degrades (does not throw) when storage is full', async () => {
@@ -140,7 +140,7 @@ describe('localStorageAdapter resilience', () => {
 
   it('getPatterns backfills FSRS defaults on read even without an init() migration', async () => {
     // a pre-v5 pattern written straight to storage (no FSRS fields)
-    localStorage.setItem('eng-ception:patterns', JSON.stringify([{
+    localStorage.setItem('engception:patterns', JSON.stringify([{
       id: 'p1', template: 'I made him ~', patternId: 'causative-bare', triggerVerb: 'make',
       category: '감정/관계', tags: [], exampleOriginal: 'x', exampleEnglish: 'y',
       savedAt: '2026-01-01T00:00:00Z', reviewCount: 0, lastReviewedAt: null,

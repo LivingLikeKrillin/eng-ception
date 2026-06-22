@@ -2,14 +2,14 @@ import type { DataStore } from './dataStore'
 import type { Scenario, LearningRecord, Pattern, Capture } from '../types'
 import { withSrsDefaults, withRecordDefaults } from '../services/srs'
 
-const SCHEMA_VERSION_KEY = 'eng-ception:schema-version'
+const SCHEMA_VERSION_KEY = 'engception:schema-version'
 const CURRENT_SCHEMA_VERSION = 6
 
 const KEYS = {
-  scenarios: 'eng-ception:scenarios',
-  records: 'eng-ception:records',
-  patterns: 'eng-ception:patterns',
-  captures: 'eng-ception:captures',
+  scenarios: 'engception:scenarios',
+  records: 'engception:records',
+  patterns: 'engception:patterns',
+  captures: 'engception:captures',
 } as const
 
 const MAX_RECORDS = 100

@@ -127,8 +127,8 @@
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/LivingLikeKrillin/eng-ception.git
-cd eng-ception
+git clone https://github.com/LivingLikeKrillin/engception.git
+cd engception
 npm install
 ```
 
@@ -151,7 +151,7 @@ npm run dev:api      # API 프록시  → http://localhost:3001
 ## Project Structure
 
 ```
-eng-ception/
+engception/
 ├── api/                    # Vercel Edge Functions
 │   └── chat.ts             # Claude API 프록시
 ├── src/

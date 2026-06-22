@@ -1,1 +1,6 @@
-{ "projects": { "default": "demo-eng-ception" } }
+{
+  "projects": {
+    "default": "engception-prod",
+    "demo": "demo-engception"
+  }
+}

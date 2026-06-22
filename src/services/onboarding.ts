@@ -1,6 +1,6 @@
 // First-run onboarding seen-flag. Device-local UI state (not synced to cloud) — best-effort
 // localStorage, mirroring services/pwa/installPrompt.ts's dismiss persistence.
-const ONBOARDED_KEY = 'eng-ception:onboarded'
+const ONBOARDED_KEY = 'engception:onboarded'
 
 export function hasSeenOnboarding(): boolean {
   try {

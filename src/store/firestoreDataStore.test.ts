@@ -33,7 +33,7 @@ describe.skipIf(!RUN)('FirestoreDataStore (emulator)', () => {
 
   beforeAll(async () => {
     env = await initializeTestEnvironment({
-      projectId: 'demo-eng-ception',
+      projectId: 'demo-engception',
       firestore: { rules: readFileSync('firestore.rules', 'utf8') },
     })
   })

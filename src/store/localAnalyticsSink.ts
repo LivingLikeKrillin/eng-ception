@@ -1,8 +1,8 @@
 import type { AnalyticsSink } from './analyticsSink'
 import type { AnalyticsEvent } from '../types/events'
 
-const EVENTS_KEY = 'eng-ception:events'
-const EVENTS_VERSION_KEY = 'eng-ception:events-version'
+const EVENTS_KEY = 'engception:events'
+const EVENTS_VERSION_KEY = 'engception:events-version'
 const CURRENT_EVENTS_VERSION = 1
 const MAX_EVENTS = 1000
 
