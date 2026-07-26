@@ -54,10 +54,11 @@ SentenceCard {
   } | null
   thumbnailUri: string | null        // 선택 구획 크롭 이미지 (로컬 파일, expo-file-system)
   createdAt: string                  // ISO
-  // ── SRS (기존 FSRS 필드 그대로 재사용) ──
+  // ── SRS (기존 FSRS 필드 그대로 재사용; srs.ts `CardSchedule` 인터페이스와 일치해야 함) ──
   stability: number | null
   difficulty: number | null
   nextDueAt: string | null           // null → 즉시 due
+  lastReviewedAt: string | null      // schedule()이 elapsed_days 계산에 사용 — 필수 (누락 시 FSRS 간격 손상)
   reps: number
   lapses: number
   cardState: 'new' | 'learning' | 'review' | 'relearning'
@@ -66,6 +67,7 @@ SentenceCard {
 ```
 
 - **dedup 키 = 정규화된 `text`** (trim/소문자). 같은 문장 중복 저장 방지.
+- **`createdAt`이 SRS `savedAt` 역할을 겸함** — dueQueue 최근성 정렬 키(§5 참조). 별도 `savedAt` 필드 없음.
 - **번역·분석은 지연 + 캐시:** 캡처 땐 `meaning`/`analysis` 모두 null(오프라인·토큰 0 유지). 복습 중 "뜻 보기"/"성분 분석" 탭 → **Claude 한 번 호출로 둘 다 받아 캐시**, 이후 재호출 없음.
 
 ## 5. 복습 루프 (C) + 성분 분석
@@ -90,6 +92,9 @@ SentenceCard {
 ### 성분 분석
 - **출처 = Claude 텍스트 호출** (`services/claude.ts` 구조화 호출 + `validate.ts` 검증 재사용). 평문 → 값싼 텍스트 토큰. 지연·캐시(번역과 1호출).
 - **스킴 = (b) SVOC 골격 + 구·절 표시.** 주어/동사/목적어/보어를 주 골격으로 두되, 종속절·주요 수식구를 별도 단위로 묶어 표시(책·논문 복문 대응). 순수 SVOC 4종은 복문에서 부족.
+- **`role` 허용값 = 닫힌 집합** (`validate.ts`가 이 집합으로 가드; 이 외 값은 검증 실패 → 재시도):
+  `'subject' | 'verb' | 'object' | 'complement' | 'modifier' | 'adverbial' | 'subordinate-clause' | 'relative-clause' | 'prepositional-phrase' | 'conjunction'`.
+  각 청크는 이 중 하나. 세부 뉘앙스는 `note`(자유 텍스트, 선택)에 담음. v1은 이 10종으로 고정 — 부족 시 후속 확장.
 - **시각 언어 = 기존 앱의 슬롯 단위 색상 청크** 재사용(`[I][made him][angry]`). 5형식 합류 시 시각 자산 연속성.
 - 솔직한 한계: 네트워크 필요 + 텍스트 토큰(유계). Claude 분석은 아주 모호한 복문에선 불완전 — `validate.ts`로 형식만 가드, 내용 오류는 참고용으로 감수.
 
@@ -97,7 +102,7 @@ SentenceCard {
 1. **홈 넛지** — "복습할 N개 →" (기존 `Home.tsx` 패턴 이식).
 2. **캡처 즉시 due** — 새 카드 `nextDueAt=null` → 바로 due 큐(`newCardDefaults` 기존 동작). 캡처-복습 고리가 짧아짐.
 3. **organic-first** — 하드 큐·강제 스트릭 없음(기존 철학 유지). 재실습 유도만.
-4. **세션 캡** — 한 번에 대량 캡처해도 복습 큐 폭발 방지(세션당 상한 ~20장, 나머진 다음 세션).
+4. **세션 캡** — 한 번의 복습 세션에 **큐에 올라오는 카드 수**를 상한(~20장)으로 제한(캡처 수 제한이 아님). 초과분은 다음 세션 큐로 이월.
 
 ### 컬렉션 뷰
 전체 카드 리스트(썸네일 + 문장, 스크롤/검색). 카드 탭 → 상세(문장·뜻·썸네일·SRS 상태·삭제).
@@ -127,8 +132,8 @@ SentenceCard {
 ├── src/
 │   ├── services/
 │   │   ├── srs.ts                 # ← 이식 (거의 그대로; schedule()는 CardSchedule 서브셋만 받음)
-│   │   ├── srsView.ts             # ← 이식 (Pattern[] → Card 타입 일반화)
-│   │   ├── ocr.ts                 # 신규 (ML Kit 래핑)
+│   │   ├── srsView.ts             # ← 이식 (아래 "srsView 단순화 이식" 참조)
+│   │   ├── ocr.ts                 # 신규 (ML Kit 래핑; 아래 "ocr 계약" 참조)
 │   │   ├── analysis.ts            # 신규 (Claude 번역+성분분석 1호출 + validate)
 │   │   ├── claude.ts / prompts.ts / validate.ts  # 이식·개작
 │   ├── store/
@@ -144,16 +149,47 @@ SentenceCard {
 
 - analytics sink 구조도 이식 가능하나 **v1 필수 아님** — noop + 로컬만, 나중에 게이트(기존 `VITE_DISABLE_ANALYTICS` 평행).
 
+### srsView 단순화 이식 (계약 명시)
+기존 `dueQueue`는 5형식 전용 필드에 의존 → `SentenceCard`엔 없음. **의도적으로 단순화해 이식:**
+- **에스컬레이션 제거** — `bypassedCount >= N_BYPASS` 우선순위 로직 삭제(C엔 단일 모드 soft-bias 개념 없음). `SentenceCard`에 `bypassedCount` 필드 **없음.**
+- **정렬 = 초과기일 → `createdAt`(오래된 순).** 기존 `savedAt` 타이브레이크를 `createdAt`으로 대체.
+- `masteryLabel`/`rollupByPattern` 중 `rollupByPattern`은 `Pattern5HId` 롤업이라 **v1 미이식**(5형식 합류 시). `isDue`/`masteryLabel`만 이식.
+→ 즉 "거의 그대로"가 아니라 **due 판정 + 초과기일·recency 정렬만 남긴 슬림 버전.**
+
+### `ocr.ts` 계약 (경계 명시)
+```ts
+// 입력: 촬영/크롭된 이미지 파일 URI
+// 출력: ML Kit 결과를 앱 도메인 타입으로 정규화
+recognize(imageUri: string): Promise<OcrResult>
+
+interface OcrResult {
+  blocks: OcrBlock[]                 // 구획 후보 (탭 선택 대상)
+}
+interface OcrBlock {
+  text: string                       // 구획 전체 평문
+  bbox: { x: number; y: number; w: number; h: number }  // 오버레이 좌표 (이미지 픽셀 기준)
+  lines: { text: string; bbox: {...} }[]                 // 필요 시 줄 단위
+}
+```
+다운스트림(구획 오버레이·크롭 폴백·로컬 문장 분리)은 이 타입만 소비 → 테스트 가능한 경계.
+
 ## 8. 재사용 vs 신규 요약
 
 | 물려받음 (순수 TS 로직) | 재작성 (RN/네이티브) | 신규 |
 |---|---|---|
 | `srs.ts` (FSRS 스케줄러) | Firestore 어댑터 (RN Firebase) | 캡처 UI (카메라·ML Kit·구획 선택) |
-| `srsView.ts` (dueQueue/mastery) | auth (native google-signin) | 컬렉션·복습 UI |
+| `srsView.ts` (isDue/masteryLabel, 슬림 이식) | auth (native google-signin) | 컬렉션·복습 UI |
 | `DataStore` 인터페이스 + `db` 파사드 | 로컬 저장소 (MMKV) | `SentenceCard` 데이터 모델 |
 | `claude.ts`/`validate.ts` 패턴 | — | `ocr.ts` / `analysis.ts` |
 | 비파괴 병합 설계 | — | `cardStore.ts` (Zustand) |
 | Claude 프록시 (`api/chat.ts`, 그대로) | — | 앱 셸·3탭 내비 |
+
+### 구현 마일스톤 (권장 — 계획 단계에서 상세화)
+1. **M1 — 코어 로컬 루프:** 캡처(카메라·OCR·구획선택·문장분리) + MMKV 저장 + 복습(C, 자가평가·SRS) + 컬렉션. **로컬 온리, 로그인 없이 shippable.**
+2. **M2 — Claude 연동:** 지연 번역 + 성분 분석(프록시 확장 포함).
+3. **M3 — 클라우드:** RN Firebase auth(구글) + Firestore 동기화 + 비파괴 병합.
+
+auth/sync(§6)는 실질적으로 독립 서브시스템이라, **첫 배포 가능 마일스톤(M1)이 Firebase-RN 재작성에 막히지 않도록** 뒤로 분리.
 
 ## 9. 범위 밖 (Deferred)
 
@@ -171,3 +207,5 @@ SentenceCard {
 - 로컬 문장 분리 정확도(약어/소수점) → 탭 선택 단계에서 교정, 실측 후 필요 시 Claude 보강.
 - RN 핵심 라이브러리(vision-camera·ml-kit) 유지보수 의존 리스크 → 커뮤니티 성숙도 높아 감내 가능.
 - EAS Build/네이티브 모듈은 Expo Go 불가 → dev build 필수(정상 경로).
+- **크로스-리포 프록시 결합:** 캡처 앱의 Claude 호출이 engception-web의 Vercel `api/chat.ts` 배포에 런타임 의존. **엔드포인트 URL을 환경변수로 명시**하고, 이 의존을 의도된 것으로 확정. (대안: 캡처 앱 리포에 동일 Edge Function을 별도 배포.)
+- **미인증 프록시 남용 표면:** `api/chat.ts`는 인증 없는 Claude 프록시 — 웹앱(동일 출처)엔 수용 가능했으나, **공개 모바일 앱이 이 URL을 가리키면 남용·비용 표면이 커짐.** v1 전 최소 방어(요청 검증/레이트리밋/앱 체크) 검토 필요. (구현 계획에서 별도 항목화.)
