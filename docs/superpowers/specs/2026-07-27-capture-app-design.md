@@ -123,7 +123,8 @@ SentenceCard {
 - **썸네일 = `expo-file-system` 파일** 저장, URI만 카드에 보관.
 
 ### Claude 프록시 — 기존 재사용
-- API 키는 RN 앱에 미포함. **기존 `api/chat.ts`(Vercel Edge)는 플랫폼 무관 HTTPS 엔드포인트** → RN이 URL 호출. 프록시 유지, **번역·성분분석 프롬프트만 추가.** 새 서버 인프라 불필요.
+- API 키는 RN 앱에 미포함. **기존 `api/chat.ts`(Vercel Edge)는 플랫폼 무관 HTTPS 엔드포인트** → RN이 URL 호출. 새 서버 인프라 불필요.
+- **프록시는 이미 `{systemPrompt, userMessage}`를 클라이언트에서 받음** → 번역·성분분석 프롬프트는 **RN 앱의 `analysis.ts`에 클라이언트 사이드로** 두면 됨. **서버 수정 불필요**(M2의 "프록시 확장"은 §10 남용 방어 항목 외엔 0). 계획 단계에서 재확인.
 
 ## 7. 프로젝트 구조 (새 Expo 리포 `engception-capture`)
 
