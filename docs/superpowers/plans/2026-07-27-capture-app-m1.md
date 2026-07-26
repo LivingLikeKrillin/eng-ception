@@ -74,9 +74,10 @@ git init && git add -A && git commit -m "chore: scaffold Expo blank-typescript a
 Run:
 ```bash
 npx expo install expo-camera expo-file-system react-native-mmkv
-npm i zustand @react-navigation/native @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context @react-native-ml-kit/text-recognition
-npm i -D jest jest-expo @types/jest ts-fsrs@5.4.1
+npm i zustand @react-navigation/native @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context @react-native-ml-kit/text-recognition ts-fsrs@5.4.1
+npm i -D jest jest-expo @types/jest
 ```
+(`ts-fsrs` is a **runtime** dependency — `srs.ts` imports it in shipped code — so it goes in `dependencies`, not `-D`.)
 
 - [ ] **Step 3: Configure jest**
 
@@ -91,6 +92,17 @@ module.exports = {
 }
 ```
 Add to `package.json` scripts: `"test": "jest", "test:watch": "jest --watch", "tsc": "tsc --noEmit"`.
+
+Also create `__mocks__/react-native-mmkv.js` (jest auto-uses it for that module — an in-memory stand-in so `new MMKV()` never touches native JSI in tests):
+```js
+class MMKV {
+  #m = new Map()
+  getString(k) { return this.#m.has(k) ? this.#m.get(k) : undefined }
+  set(k, v) { this.#m.set(k, v) }
+  delete(k) { this.#m.delete(k) }
+}
+module.exports = { MMKV }
+```
 
 - [ ] **Step 4: Sanity test**
 
@@ -119,7 +131,8 @@ git add -A && git commit -m "chore: jest-expo harness + deps"
 ```ts
 export type CardStateName = 'new' | 'learning' | 'review' | 'relearning'
 
-// The persisted FSRS subset — matches srs.ts CardSchedule exactly.
+// The persisted FSRS subset. Superset of srs.ts CardSchedule (adds lastGrade, which
+// the store owns — schedule() does not return it). Structurally satisfies CardSchedule.
 export interface SrsCardFields {
   stability: number | null
   difficulty: number | null
@@ -217,8 +230,8 @@ Expected: FAIL (module `./srs` not found).
 - [ ] **Step 3: Write the implementation**
 
 `src/services/srs.ts` — port the scheduler core from the web repo verbatim (the `params`/`scheduler`, `CardSchedule`, `NextSchedule`, `toTsCard`, `schedule`, State maps, `INTRO_PHASE`, `REQUEST_RETENTION`), with these changes:
-- Remove `import type { Pattern, LearningRecord }` and everything using them.
-- `SrsFields`/`newCardDefaults`: drop `bypassedCount`.
+- Remove `import type { Pattern, LearningRecord }` and everything using them (also drop `withSrsDefaults`, `withRecordDefaults`, `gradeFromSignals`).
+- `SrsFields`/`newCardDefaults`: **drop `bypassedCount` AND add `lastReviewedAt: null`** (the web version has neither the right shape — it lacks `lastReviewedAt`). The returned object must exactly equal the 8-field object asserted in Step 1. Update the `SrsFields` interface to match (no `bypassedCount`, has `lastReviewedAt: string | null`) — or return `SrsCardFields` from `types/card.ts` directly to keep one source of truth.
 - Add:
 ```ts
 export type SelfRating = 'again' | 'good' | 'easy'
@@ -582,20 +595,25 @@ export function createMmkvStore(storage = new MMKV()): DataStore {
 
 - [ ] **Step 2: Implement the db facade**
 
-`src/store/db.ts`:
+`src/store/db.ts` — **lazy adapter** so `new MMKV()` runs on first use, not at import (otherwise importing `cardStore` in a jest/Node env with no JSI throws):
 ```ts
 import type { DataStore } from './dataStore'
 import { createMmkvStore } from './mmkvStore'
 
-let adapter: DataStore = createMmkvStore()
+let adapter: DataStore | null = null
+function active(): DataStore {
+  if (!adapter) adapter = createMmkvStore()
+  return adapter
+}
 export const db: DataStore = {
-  getAllCards: () => adapter.getAllCards(),
-  addCard: (c) => adapter.addCard(c),
-  updateSchedule: (id, p) => adapter.updateSchedule(id, p),
-  deleteCard: (id) => adapter.deleteCard(id),
+  getAllCards: () => active().getAllCards(),
+  addCard: (c) => active().addCard(c),
+  updateSchedule: (id, p) => active().updateSchedule(id, p),
+  deleteCard: (id) => active().deleteCard(id),
 }
 export function setDbAdapter(next: DataStore) { adapter = next }
 ```
+Combined with the `__mocks__/react-native-mmkv.js` mock (Task 1), the store tests never hit native — they import `cardStore` safely and drive it through the injected in-memory store.
 
 - [ ] **Step 3: Verify compile** — `npx tsc --noEmit` → no errors
 
@@ -619,7 +637,6 @@ git commit -m "feat(store): MMKV adapter + swappable db facade"
 ```ts
 import { createCardActions } from './cardStore'
 import { createMemoryStore } from './dataStore'
-import { dedupKey } from '../services/normalize'
 
 const NOW = new Date('2026-07-27T00:00:00.000Z')
 const genId = (() => { let n = 0; return () => `id${++n}` })()
@@ -832,10 +849,10 @@ git commit -m "feat(capture): block overlay + sentence picker components"
 
 - [ ] **Step 1: Implement the flow**
   1. `expo-camera` preview; shutter → `takePictureAsync()` → `photo.uri`.
-  2. `recognize(photo.uri)` → `OcrResult`; render photo + `BlockOverlay`.
+  2. `recognize(photo.uri)` → `OcrResult`; render photo + `BlockOverlay`. **Pass the captured photo's pixel size** (`photo.width`/`photo.height` from `takePictureAsync()`) into `BlockOverlay` as `sourceSize` so bboxes (image-pixel coords, spec §7) scale to the on-screen image.
   3. On block tap → `splitSentences(block.text)` → `SentencePicker`.
-  4. Manual-crop fallback: if no block tapped, allow a drag-rect (v1 minimal — a full-image fallback that runs `splitSentences` over the whole `OcrResult` joined text is acceptable if crop-rect is deferred; note this in a `// TODO(after-M1): drag-crop` comment only if truly deferred — otherwise implement a simple rect).
-  5. Save the thumbnail: crop/copy the selected region image to app storage via `expo-file-system` (`documentDirectory`), keep its uri.
+  4. Manual-crop fallback: if no block tapped, run `splitSentences` over the whole `OcrResult` joined block text (full-image fallback). The drag-rect crop is deferred — mark it `// TODO(after-M1): drag-crop`.
+  5. Save the thumbnail. **M1 = full-photo copy** (no per-block crop): copy `photo.uri` into `expo-file-system` `documentDirectory` and keep that uri. (Per-block image cropping needs `expo-image-manipulator` and lands with the drag-crop feature after M1 — do NOT add that dep in M1.) This keeps §4's `thumbnailUri` populated and the flow unambiguous.
   6. `useCardStore().saveSentences(selected, thumbUri)` → toast "N개 저장" → reset to camera.
 
 - [ ] **Step 2: Integration/manual verification** (dev build required)
@@ -868,9 +885,22 @@ git add src/screens/CaptureScreen.tsx && git commit -m "feat(capture): camera→
 
 - [ ] **Step 2: Implement `ReviewScreen`**
   1. On focus: `useCardStore().refresh()`.
-  2. `queue = dueQueue(cards, new Date()).slice(0, 20)` (session cap = 20 in-queue).
-  3. Show `queue[i]`; on rate → `gradeCard(id, rating)` → `i++`.
-  4. Empty state when queue is exhausted ("오늘 복습 끝 🎉").
+  2. **Snapshot the queue ONCE per session** — seed it on focus into local state, independent of later `cards` refreshes:
+     ```ts
+     const [queue, setQueue] = useState<SentenceCard[]>([])
+     const [i, setI] = useState(0)
+     useFocusEffect(useCallback(() => {
+       (async () => {
+         await useCardStore.getState().refresh()
+         const cards = useCardStore.getState().cards
+         setQueue(dueQueue(cards, new Date()).slice(0, 20)) // session cap = 20 in-queue
+         setI(0)
+       })()
+     }, []))
+     ```
+     **Do NOT re-derive `queue` from live `cards` on each render** — `gradeCard` updates the store, which would drop the just-graded card out of the queue and shift every later index down, making `i++` skip a card.
+  3. Show `queue[i]`; on rate → `await gradeCard(queue[i].id, rating)` → `setI(i + 1)`. Iterate the frozen snapshot by index.
+  4. Empty state when `i >= queue.length` ("오늘 복습 끝 🎉").
 
 - [ ] **Step 3: Verify compile** — `npx tsc --noEmit`
 
@@ -910,7 +940,7 @@ git commit -m "feat(collection): list + search + card detail + delete"
 - Modify: `App.tsx`
 - Create: `src/components/DueNudge.tsx` (optional header nudge)
 
-- [ ] **Step 1: 3-tab bottom navigation** — `캡처 / 복습 / 컬렉션` via `@react-navigation/bottom-tabs`; `CardDetail` as a stack pushed from Collection. Show a due-count badge on the 복습 tab (`dueQueue(cards, now).length`).
+- [ ] **Step 1: 3-tab bottom navigation** — `캡처 / 복습 / 컬렉션` via `@react-navigation/bottom-tabs`; `CardDetail` as a stack pushed from Collection. Show a due-count badge on the 복습 tab (`dueQueue(cards, now).length`). **Note:** the nav has no Home screen, so this 복습-tab badge is M1's substitute for spec §5's "홈 넛지" — an intentional adaptation.
 
 - [ ] **Step 2: On app start** — `useCardStore().refresh()` once (e.g. in `App.tsx` effect).
 
@@ -942,6 +972,12 @@ Expected: an installable APK artifact. Install on device, repeat the Task 15 end
 ```bash
 git add eas.json app.config.ts && git commit -m "chore(build): EAS dev + preview profiles"
 ```
+
+---
+
+### Chunk 4 verification
+- [ ] `npx tsc --noEmit` clean; `npx jest` still green (no logic regressions)
+- [ ] Manual (dev build): 3-tab nav works, 복습 badge reflects due count, review empties the frozen queue without skipping, collection search + delete work
 
 ---
 
