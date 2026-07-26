@@ -242,7 +242,7 @@ git commit -m "feat(p0): Construction/Slot/SlotRole/PatternKind types"
 **Files:**
 - Modify: `src/types/card.ts`
 - Create: `src/types/lexical.ts`
-- Modify: `src/store/cardStore.ts:20-24` (카드 생성부)
+- Modify: `src/store/cardStore.ts:20-23` (카드 생성부)
 - Modify: `src/store/dataStore.test.ts:5-8` (`SentenceCard` 팩토리)
 - Modify: `src/services/srsView.test.ts:4-9` (`SentenceCard` 팩토리)
 - Test: `src/types/card.test.ts`, `src/types/lexical.test.ts`
