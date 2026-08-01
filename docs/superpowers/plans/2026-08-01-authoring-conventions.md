@@ -683,23 +683,13 @@ git add src/services/validateLibrary.ts src/services/validateLibrary.test.ts
 git commit -m "feat(authoring): V4/V5 curated-verb surfacing + head-verb chunk is frame"
 ```
 
-- [ ] **Step 6: (선택) V7 — subject 청크의 동사 삼킴 검사**
-
-스펙에는 없는 **추가 규칙**이다. 채택 여부를 사용자에게 확인한 뒤에만 구현할 것. 굴절 표가 생긴 지금은 R2 위반의 절반을 기계로 잡을 수 있다:
-
-```ts
-    // V7 — a subject chunk must not swallow a verb across a space (spec R2).
-    for (const s of c.slots) {
-      if (s.role !== 'subject') continue
-      const tokens = surfaceTokens(s.label).filter((t) => !t.startsWith("'"))
-      const hit = tokens.find((t) => Object.values(VERB_FORMS).some((f) => f.includes(t)))
-      if (hit && tokens.length > 1) {
-        errs.push(`construction "${c.id}": subject chunk "${s.label}" swallows a verb ("${hit}")`)
-      }
-    }
-```
-
-`[I'm]`은 clitic만 있어 통과하고, `[I don't think]`는 `think` 때문에 걸린다. 한계: `[I'm afraid]`처럼 동사가 아닌 보어를 삼킨 경우는 못 잡는다.
+> **V7(subject 청크의 동사 삼킴 검사)은 채택하지 않는다 — 결정 완료, 구현하지 말 것.**
+>
+> 근거: (1) 큐레이션 동사 상당수가 명사 동음이의어(`call`·`show`·`look`·`need`·`watch`·`find`)라 `[the call I got]` 같은 정상 주어 NP를 오탐하는데 검증기에 opt-out이 없다. (2) R2 위반의 절반만 잡는다 — 관측된 2건 중 `[I'm afraid]`(동사 아닌 보어 삼킴)는 못 잡으므로 사람 판정이 여전히 필요하다. (3) 지금 넣었다가 오탐에 시달리면 되돌리는 비용이 더 크다.
+>
+> **재검토 트리거:** 인벤토리 확장 중 R2 위반이 **3건 이상 재발**하면, 초안(모든 동사 굴절형)이 아니라 **조동사·부정 토큰으로 좁힌 변형**(`don't`/`doesn't`/`can't`/`will`/`have`/`is`/`are` 등 ~15개)으로 넣는다. 명사와 겹치지 않아 오탐이 사실상 0이고, `[I don't think]`는 `don't`로 잡힌다.
+>
+> 그때까지 R2는 치트시트(Task 10)의 위반/교정 대조표가 커버한다.
 
 ---
 
