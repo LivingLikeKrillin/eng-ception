@@ -40,14 +40,13 @@ engception-capture/
 │   │   ├── db.ts                 # swappable db facade (mirrors web repo)
 │   │   └── cardStore.ts          # Zustand: capture/review/collection state + actions
 │   ├── screens/
-│   │   ├── CaptureScreen.tsx
-│   │   ├── ReviewScreen.tsx
-│   │   ├── CollectionScreen.tsx
+│   │   ├── CaptureScreen.tsx     # P2가 플레이스홀더로 만들어둠 — Task 12에서 교체
+│   │   ├── CollectionScreen.tsx  # P2 구현본에 썸네일·검색·상세 진입만 추가
 │   │   └── CardDetailScreen.tsx
 │   └── components/
 │       ├── BlockOverlay.tsx      # tappable OCR block boxes over the photo
-│       ├── SentencePicker.tsx    # multi-select sentence list
-│       └── ReviewCard.tsx        # English-first card + 3-button self-rate
+│       └── SentencePicker.tsx    # multi-select sentence list
+│       # ReviewCard/ReviewScreen: P2 다이얼이 대체 — 만들지 않는다
 └── __mocks__/                    # native module mocks for jest
 ```
 
@@ -874,84 +873,55 @@ git add src/screens/CaptureScreen.tsx && git commit -m "feat(capture): camera→
 
 ---
 
-## Chunk 4: Review + Collection UI + navigation
+## Chunk 4: 캡처 화면 연결 + 카드 상세 (P2 개정)
 
-### Task 13: ReviewCard component + ReviewScreen
+> **⚠️ 이 청크는 P2 트레이너 완료로 축소됐다.** 스펙: 웹 리포 `docs/superpowers/specs/2026-08-01-p2-trainer-design.md` §8-C.
+>
+> 북극성 §7이 "M1 복습(English-first read/shadow)은 Lv1의 특수형이고 P2 비계 다이얼이 **흡수·대체**한다(공존 아님)"고 못 박았고, P2가 P1보다 먼저 구현되면서 다음이 이미 존재한다:
+>
+> | 원래 산출물 | 현 상태 |
+> |---|---|
+> | `ReviewCard` + `ReviewScreen` | **삭제** — `TrainScreen` + 다이얼 컴포넌트가 대체. read/shadow는 `levelForCard`가 Lv1으로 떨어뜨리는 경로로 살아있다 |
+> | `CollectionScreen` 리스트 | **존재** — P2가 구현(문장·어휘 세그먼트 + `masteryLabel` + 레벨 뱃지). 남은 건 썸네일·검색·상세 진입 |
+> | 3탭 내비 + due 뱃지 | **존재** — `src/navigation/RootTabs.tsx`. 캡처 탭은 플레이스홀더 |
+> | `App.tsx` 기동 배선 | **존재** — `seedIfNeeded` → `refresh` |
+
+### ~~Task 13: ReviewCard component + ReviewScreen~~ (삭제)
+
+P2의 `TrainScreen`·`AssembleBoard`·`FillBlanks`·`RecallReveal`·`SelfRateBar`가 대체한다. 큐 스냅샷 설계(한 세션 = 한 번 얼린 큐, 인덱스 전진)는 `trainerStore`가 그대로 계승했다 — 채점으로 due가 바뀌어도 카드가 밀리거나 건너뛰지 않는다.
+
+### Task 14 (축소): CardDetailScreen + 컬렉션 보강
 
 **Files:**
-- Create: `src/components/ReviewCard.tsx`, `src/screens/ReviewScreen.tsx`
+- Create: `src/screens/CardDetailScreen.tsx`
+- Modify: `src/screens/CollectionScreen.tsx`(P2 구현본), `src/navigation/RootTabs.tsx`
 
-- [ ] **Step 1: Implement `ReviewCard`** — English-first: large `text`; row of `[뜻 보기] [성분 분석] [🖼 출처]` (disabled/placeholder in M1 — meaning/analysis are M2; 출처 opens thumbnail peek); self-rate row `[다시][됐어][쉬움]` calling `onRate('again'|'good'|'easy')`.
-
-- [ ] **Step 2: Implement `ReviewScreen`**
-  1. On focus: `useCardStore().refresh()`.
-  2. **Snapshot the queue ONCE per session** — seed it on focus into local state, independent of later `cards` refreshes:
-     ```ts
-     const [queue, setQueue] = useState<SentenceCard[]>([])
-     const [i, setI] = useState(0)
-     useFocusEffect(useCallback(() => {
-       (async () => {
-         await useCardStore.getState().refresh()
-         const cards = useCardStore.getState().cards
-         setQueue(dueQueue(cards, new Date()).slice(0, 20)) // session cap = 20 in-queue
-         setI(0)
-       })()
-     }, []))
-     ```
-     **Do NOT re-derive `queue` from live `cards` on each render** — `gradeCard` updates the store, which would drop the just-graded card out of the queue and shift every later index down, making `i++` skip a card.
-  3. Show `queue[i]`; on rate → `await gradeCard(queue[i].id, rating)` → `setI(i + 1)`. Iterate the frozen snapshot by index.
-  4. Empty state when `i >= queue.length` ("오늘 복습 끝 🎉").
-
-- [ ] **Step 3: Verify compile** — `npx tsc --noEmit`
-
-- [ ] **Step 4: Manual verification** (dev build)
-Capture 2 cards → Review tab shows them (new = due now) → rate each → queue empties → empty state.
-
+- [ ] **Step 1: `CardDetailScreen`** — 전체 문장, 썸네일(있으면), SRS 상태(`masteryLabel`, `nextDueDate([card])`), 삭제 버튼 → `deleteCard(id)` → back.
+- [ ] **Step 2: 컬렉션 보강** — 행에 썸네일 추가 + 검색창(`dedupKey` 방식 대소문자 무시 매치) + 탭 시 상세로. 문장/어휘 세그먼트는 이미 있다.
+- [ ] **Step 3: 내비** — 컬렉션 탭을 스택으로 감싸 `CardDetail`을 push.
+- [ ] **Step 4: 검증** — `npm run tsc` + 렌더테스트(P2가 도입한 `@testing-library/react-native`; ⚠️ `render`는 async).
 - [ ] **Step 5: Commit**
 ```bash
-git add src/components/ReviewCard.tsx src/screens/ReviewScreen.tsx
-git commit -m "feat(review): English-first read/shadow card + due-queue session"
+git add src/screens/CardDetailScreen.tsx src/screens/CollectionScreen.tsx src/navigation/RootTabs.tsx
+git commit -m "feat(collection): 썸네일·검색·카드 상세"
 ```
 
 ---
 
-### Task 14: CollectionScreen + CardDetailScreen
+### Task 15 (축소): 캡처 탭 실물 연결
 
 **Files:**
-- Create: `src/screens/CollectionScreen.tsx`, `src/screens/CardDetailScreen.tsx`
+- Modify: `src/navigation/RootTabs.tsx`, `src/screens/CaptureScreen.tsx`(플레이스홀더 교체)
 
-- [ ] **Step 1: `CollectionScreen`** — `FlatList` of all cards (thumbnail + text + `masteryLabel`), search box filtering by `text` (case-insensitive `dedupKey`-style match). Tap → `CardDetailScreen`.
-
-- [ ] **Step 2: `CardDetailScreen`** — full text, thumbnail (if any), SRS state (`masteryLabel`, next due via `nextDueDate([card])`), delete button → `deleteCard(id)` → back.
-
-- [ ] **Step 3: Verify compile** — `npx tsc --noEmit`
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 1** — 플레이스홀더 `CaptureScreen`을 Task 12의 실물 구현으로 교체한다. 탭 슬롯·뱃지·기동 배선은 손대지 않는다(P2에서 완료).
+- [ ] **Step 2: 수동 종단 검증**(dev build) — 신규 설치 → 오프라인으로 3문장 캡처 → 훈련 탭 뱃지 증가 → 다이얼로 복습 → 뱃지 감소 → 컬렉션에 3장.
+- [ ] **Step 3: Commit**
 ```bash
-git add src/screens/CollectionScreen.tsx src/screens/CardDetailScreen.tsx
-git commit -m "feat(collection): list + search + card detail + delete"
+git add src/screens/CaptureScreen.tsx
+git commit -m "feat(capture): 캡처 탭 실물 화면 연결"
 ```
 
----
-
-### Task 15: Navigation + due nudge + App wiring
-
-**Files:**
-- Modify: `App.tsx`
-- Create: `src/components/DueNudge.tsx` (optional header nudge)
-
-- [ ] **Step 1: 3-tab bottom navigation** — `캡처 / 복습 / 컬렉션` via `@react-navigation/bottom-tabs`; `CardDetail` as a stack pushed from Collection. Show a due-count badge on the 복습 tab (`dueQueue(cards, now).length`). **Note:** the nav has no Home screen, so this 복습-tab badge is M1's substitute for spec §5's "홈 넛지" — an intentional adaptation.
-
-- [ ] **Step 2: On app start** — `useCardStore().refresh()` once (e.g. in `App.tsx` effect).
-
-- [ ] **Step 3: Manual end-to-end** (dev build)
-Fresh install → capture 3 sentences offline → 복습 tab badge = 3 → review all → badge clears → Collection shows 3 with mastery labels → open one → delete → Collection shows 2.
-
-- [ ] **Step 4: Commit**
-```bash
-git add App.tsx src/components/DueNudge.tsx
-git commit -m "feat(nav): 3-tab navigation + due-count badge + startup refresh"
-```
+**추가 검증 항목(P2가 남긴 미결):** 실기기에서 다이얼 3레벨의 레이아웃·키보드 가림·터치 영역을 육안 확인한다 — P2는 렌더테스트로 동작만 고정했다.
 
 ---
 
@@ -977,12 +947,13 @@ git add eas.json app.config.ts && git commit -m "chore(build): EAS dev + preview
 
 ### Chunk 4 verification
 - [ ] `npx tsc --noEmit` clean; `npx jest` still green (no logic regressions)
-- [ ] Manual (dev build): 3-tab nav works, 복습 badge reflects due count, review empties the frozen queue without skipping, collection search + delete work
+- [ ] Manual (dev build): 캡처 탭이 실물 화면을 열고, 훈련 탭 뱃지가 due 수를 반영하며, 컬렉션 검색·삭제가 동작한다
+- [ ] Manual (dev build): 다이얼 3레벨의 레이아웃·키보드 가림·터치 영역 육안 확인 (P2가 남긴 미결)
 
 ---
 
 ### M1 done — definition of done
 - [ ] `npx jest` all green; `npx tsc --noEmit` clean
-- [ ] Offline (airplane mode): capture → save → review → collection all work with zero network calls
+- [ ] Offline (airplane mode): 캡처 → 저장 → 다이얼 훈련 → 컬렉션이 네트워크 호출 0으로 동작
 - [ ] `eas build --profile preview` produces an installable APK
 - [ ] No login, no Claude calls anywhere in the app (those are M2/M3)

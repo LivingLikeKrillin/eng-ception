@@ -185,7 +185,7 @@ Lv3 reveal 화면에서 모범답의 청크를 탭 → 바텀시트:
 
 MMKV 키를 새로 쓰므로 **기존 문장 카드 키는 건드리지 않는다** → 마이그레이션 불필요. `lexicalStore.ts`는 `cardStore.ts`와 평행 구조(주입식 `createLexicalActions` + Zustand 훅).
 
-`srsView.ts`의 `isDue`/`dueQueue`/`nextDueDate`/`masteryLabel`은 현재 `SentenceCard`로 타입이 좁다. **`SrsCardFields & { createdAt: string }` 제네릭으로 넓혀** 어휘 카드도 같은 뷰 함수를 쓴다(구현 변경 없음 — 이미 이 필드들만 읽는다). `LexicalCard`에 `createdAt`이 없으므로 **필드를 추가**한다(P0 스키마 확장 1건 — 어휘 카드는 아직 실사용 데이터가 0이라 비용 없음).
+`srsView.ts`의 `isDue`/`dueQueue`/`nextDueDate`/`masteryLabel`은 현재 `SentenceCard`로 타입이 좁다. **`SrsCardFields & { createdAt: string }` 제네릭으로 넓혀** 어휘 카드도 같은 뷰 함수를 쓴다(구현 변경 없음 — 이미 이 필드들만 읽는다). `LexicalCard`에 `createdAt`이 없으므로 **필드를 추가**한다(P0 스키마 확장 1건 — 어휘 카드는 아직 실사용 데이터가 0이라 비용 없음). 기존 `seedLexical.ts` 픽스처 3건도 함께 채워야 `tsc`가 통과한다.
 
 ## 7. 빠져 있던 연결 2건
 
@@ -202,6 +202,9 @@ MMKV 키를 새로 쓰므로 **기존 문장 카드 키는 건드리지 않는�
 **(2) `cardStore.gradeCard`가 자가평가만 받는다.** 현재 시그니처는 `(id, rating: SelfRating)`이고 내부에서 `gradeFromSelfRating`을 부른다. Lv1/Lv2는 이미 `Grade`를 산출하므로 자가평가로 되돌릴 수 없다.
 
 → `createCardActions`에 **`gradeCardWith(id, grade: Grade, at?)`** 를 추가하고, 기존 `gradeCard(id, rating)`은 `gradeFromSelfRating` → `gradeCardWith` 위임으로 축소한다. 호출부(M1 복습)는 시그니처가 유지되므로 무손상. 채점 커밋 시 `scaffoldLevel` 스냅샷(4-A)도 이 경로에서 함께 갱신한다.
+
+**(2-a) 스냅샷을 쓸 통로가 없다.** `DataStore.updateSchedule`의 patch 타입이 `Partial<SrsCardFields>`인데 `scaffoldLevel`은 `CardMetaFields` 소속이라 타입이 막는다.
+→ patch 타입을 **`Partial<SrsCardFields & Pick<CardMetaFields, 'scaffoldLevel'>>`** 로 넓힌다. 메모리·MMKV 어댑터 둘 다 patch를 그대로 spread하므로 **런타임 구현 변경은 0**, 타입만 넓어진다. 메타 필드 전체를 열지 않는 이유는 `constructionId`/`functionFacet` 같은 recognition 소유 필드가 채점 경로로 새는 걸 막기 위해서다(그건 P3의 몫).
 
 ## 8. 표면 (D5)
 
