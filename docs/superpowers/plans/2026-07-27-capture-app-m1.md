@@ -753,6 +753,8 @@ git add src/store/cardStore.* && git commit -m "feat(store): cardStore actions �
 
 ## Chunk 3: OCR service + Capture UI
 
+> **✅ 2026-08-18 진행** — Task 10·11은 **기기 없이 완료**했다(RN `engception-app#5`). "Chunk 3부터 기기 필요"는 과했다: 실제로 기기가 필요한 건 **Task 12뿐**이다. Task 11의 컴포넌트는 플랜의 `src/components/`가 아니라 **`src/components/capture/`**에 뒀다 — P2가 `components/trainer/` 하위 폴더 관례를 만들었기 때문. 둘 다 RNTL 렌더 테스트로 고정돼 있다.
+>
 > **Native reality:** `expo-camera` and `@react-native-ml-kit/text-recognition` require a **dev build** (not Expo Go) and a device/emulator. Their behavior is verified by **integration/manual steps**, not unit tests — do not fabricate unit tests that "mock the camera" into passing. The testable seam is `ocr.ts`'s normalization and the sentence-picker glue.
 
 ### Task 10: `ocr.ts` — ML Kit wrapper + result normalization
@@ -761,7 +763,7 @@ git add src/store/cardStore.* && git commit -m "feat(store): cardStore actions �
 - Create: `src/services/ocr.ts`
 - Test: `src/services/ocr.test.ts` (tests only the pure normalizer)
 
-- [ ] **Step 1: Write the failing test** (normalizer only)
+- [x] **Step 1: Write the failing test** (normalizer only)
 
 `src/services/ocr.test.ts`:
 ```ts
@@ -785,9 +787,9 @@ test('normalizeMlkit maps ML Kit blocks/lines to OcrResult with bbox', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `npx jest src/services/ocr.test.ts` → FAIL
+- [x] **Step 2: Run to verify it fails** — `npx jest src/services/ocr.test.ts` → FAIL
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/services/ocr.ts`:
 ```ts
@@ -813,9 +815,9 @@ export async function recognize(imageUri: string): Promise<OcrResult> {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes** — Expected: PASS
+- [x] **Step 4: Run to verify it passes** — Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add src/services/ocr.* && git commit -m "feat(ocr): ML Kit wrapper + result normalizer"
 ```
@@ -827,13 +829,13 @@ git add src/services/ocr.* && git commit -m "feat(ocr): ML Kit wrapper + result 
 **Files:**
 - Create: `src/components/BlockOverlay.tsx`, `src/components/SentencePicker.tsx`
 
-- [ ] **Step 1: Implement `BlockOverlay`** — renders tappable rectangles from `OcrBlock[]` scaled to the displayed image size; `onSelect(block)` on tap. (Props: `blocks`, `imageLayout {w,h}`, `sourceSize {w,h}`, `onSelect`.) Scale each `bbox` by `imageLayout.w / sourceSize.w` etc.
+- [x] **Step 1: Implement `BlockOverlay`** — renders tappable rectangles from `OcrBlock[]` scaled to the displayed image size; `onSelect(block)` on tap. (Props: `blocks`, `imageLayout {w,h}`, `sourceSize {w,h}`, `onSelect`.) Scale each `bbox` by `imageLayout.w / sourceSize.w` etc.
 
-- [ ] **Step 2: Implement `SentencePicker`** — takes `sentences: string[]`, renders a multi-select list (tap toggles), `selected` state, `onConfirm(selected: string[])`. Reuses no native APIs → could be RTL-tested, but keep it simple; verified in the capture flow smoke.
+- [x] **Step 2: Implement `SentencePicker`** — takes `sentences: string[]`, renders a multi-select list (tap toggles), `selected` state, `onConfirm(selected: string[])`. Reuses no native APIs → could be RTL-tested, but keep it simple; verified in the capture flow smoke.
 
-- [ ] **Step 3: Verify compile** — `npx tsc --noEmit`
+- [x] **Step 3: Verify compile** — `npx tsc --noEmit`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 ```bash
 git add src/components/BlockOverlay.tsx src/components/SentencePicker.tsx
 git commit -m "feat(capture): block overlay + sentence picker components"
@@ -930,9 +932,11 @@ git commit -m "feat(capture): 캡처 탭 실물 화면 연결"
 **Files:**
 - Create/Modify: `eas.json`, `app.config.ts`
 
-- [ ] **Step 1: Configure `app.config.ts`** — app name `engception`, android package id, camera permission (`expo-camera` plugin with `cameraPermission` copy in Korean), ML Kit plugin if required.
+> **✅ 부분 완료(2026-08-18, `engception-app#5`)** — Step 1·2를 `app.config.ts` 대신 **`app.json` + `eas.json`**으로 처리했다(동적 설정이 필요 없어 정적 JSON으로 충분). 카메라 권한 문구(한국어) · 안드로이드 패키지 `com.livinglikekrillin.engception` · `recordAudioAndroid: false`(마이크 권한 제거) · development/preview/production 프로필. ML Kit는 플러그인 불필요(autolinking). `services/appConfig.test.ts`가 이 값들을 드리프트 가드로 잠갔고, `npx expo config`로 최종 매니페스트에 CAMERA만 남는 걸 확인했다. **남은 건 Step 3(클라우드 빌드)뿐이며 Expo 계정이 필요하다.**
 
-- [ ] **Step 2: Configure `eas.json`** — `development` (dev client) + `preview` (internal apk) profiles.
+- [x] **Step 1: Configure `app.config.ts`** — app name `engception`, android package id, camera permission (`expo-camera` plugin with `cameraPermission` copy in Korean), ML Kit plugin if required.
+
+- [x] **Step 2: Configure `eas.json`** — `development` (dev client) + `preview` (internal apk) profiles.
 
 - [ ] **Step 3: Cloud build** (Windows-friendly)
 Run: `eas build -p android --profile preview`
